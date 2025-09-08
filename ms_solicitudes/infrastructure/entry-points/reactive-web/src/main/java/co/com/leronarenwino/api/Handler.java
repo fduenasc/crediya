@@ -6,6 +6,7 @@ import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.usecase.GetLoanApplicationUseCase;
 import co.com.leronarenwino.usecase.GetLoanTypeUseCase;
 import co.com.leronarenwino.usecase.SaveLoanApplicationUseCase;
+import co.com.leronarenwino.usecase.UpdateLoanApplicationUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,6 +41,7 @@ public class Handler {
     private static final Logger log = LoggerFactory.getLogger(Handler.class);
 
     private final SaveLoanApplicationUseCase saveLoanApplicationUseCase;
+    private final UpdateLoanApplicationUseCase updateLoanApplicationUseCase;
     private final GetLoanApplicationUseCase getLoanApplicationUseCase;
 
     private final GetLoanTypeUseCase getLoanTypeUseCase;
@@ -49,12 +51,14 @@ public class Handler {
 
     public Handler(
             SaveLoanApplicationUseCase saveLoanApplicationUseCase,
+            UpdateLoanApplicationUseCase updateLoanApplicationUseCase,
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
             RestConsumer restConsumer,
             Validator validator
     ) {
         this.saveLoanApplicationUseCase = saveLoanApplicationUseCase;
+        this.updateLoanApplicationUseCase = updateLoanApplicationUseCase;
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
         this.restConsumer = restConsumer;
@@ -457,6 +461,26 @@ public class Handler {
                 .doOnSuccess(ignored -> log.info("Loan application successfully registered!"));
     }
 
+    public Mono<ServerResponse> updateLoanApplicationStatus(ServerRequest serverRequest) {
+        log.info("Put /api/v1/loan-application/{id} request received");
+        return getPathVariable(serverRequest, "id")
+                .flatMap(id ->
+                        serverRequest.bodyToMono(UpdateLoanApplicationRequest.class)
+                                .switchIfEmpty(Mono.error(new IllegalArgumentException("The request body cannot be empty")))
+                                .flatMap(this::validateUpdateLoanApplicationRequest)
+                                .doOnNext(request -> log.info("Update payload for loan application {}: {}", id, request))
+                                .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus()))
+                                .then(Mono.defer(() -> ServerResponse.ok()
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .bodyValue(success(null, "Loan application loanStatus successfully updated"))))
+                                .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
+
+    }
+
+    public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {
+        return Mono.just(Long.valueOf(serverRequest.pathVariable(id)));
+    }
+
     Mono<LoanApplicationRequest> validateLoanApplicationRequest(LoanApplicationRequest loanApplicationRequest) {
         Set<ConstraintViolation<LoanApplicationRequest>> violations = validator.validate(loanApplicationRequest);
         if (!violations.isEmpty()) {
@@ -464,6 +488,15 @@ public class Handler {
             return Mono.error(new IllegalArgumentException(message));
         }
         return Mono.just(loanApplicationRequest);
+    }
+
+    Mono<UpdateLoanApplicationRequest> validateUpdateLoanApplicationRequest(UpdateLoanApplicationRequest updateLoanApplicationRequest) {
+        Set<ConstraintViolation<UpdateLoanApplicationRequest>> violations = validator.validate(updateLoanApplicationRequest);
+        if (!violations.isEmpty()) {
+            String message = violations.iterator().next().getMessage();
+            return Mono.error(new IllegalArgumentException(message));
+        }
+        return Mono.just(updateLoanApplicationRequest);
     }
 
 }
