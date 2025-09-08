@@ -68,20 +68,32 @@ services:
       interval: 30s
     restart: unless-stopped
 
-  # Ejemplo de otro microservicio (Solicitudes)
-  # ms-solicitudes:
-  #   image: ms-solicitudes:latest
-  #   container_name: ms-solicitudes
-  #   environment:
-  #     SPRING_PROFILES_ACTIVE: docker
-  #     AUTH_SERVICE_URL: http://ms-autenticacion:8080
-  #   ports:
-  #     - "8082:8080"
-  #   depends_on:
-  #     ms-autenticacion:
-  #       condition: service_healthy
-  #   networks:
-  #     - crediya-network
+  # Microservicio de Solicitudes
+  ms-solicitudes:
+    build:
+      context: ./ms_solicitudes
+      dockerfile: Dockerfile
+    container_name: ms-solicitudes
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_USER_GENERATOR: ${JWT_USER_GENERATOR}
+      SPRING_R2DBC_URL: r2dbc:mysql://mysql-loan:3306/crediya_solicitudes_db?serverTimezone=UTC
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql-loan:
+        condition: service_healthy
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      timeout: 30s
+      retries: 5
+      interval: 30s
+    restart: unless-stopped
 
 volumes:
   mysql_auth_data:
