@@ -81,6 +81,7 @@ services:
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
       JWT_USER_GENERATOR: ${JWT_USER_GENERATOR}
       SPRING_R2DBC_URL: r2dbc:mysql://mysql-loan:3306/crediya_solicitudes_db?serverTimezone=UTC
+      MS_AUTENTICACION_URL: http://ms-autenticacion:8080
     ports:
       - "8081:8081"
     depends_on:
