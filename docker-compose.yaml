@@ -1,0 +1,94 @@
+services:
+  # Base de datos para el microservicio de Autenticación
+  mysql-auth:
+    image: mysql:8.0
+    container_name: mysql-auth
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_AUTH_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_auth_data:/var/lib/mysql
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+
+  # Base de datos para el microservicio de Préstamos
+  mysql-loan:
+    image: mysql:8.0
+    container_name: mysql-loan
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_LOAN_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_loan_data:/var/lib/mysql
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+
+  # Microservicio de Autenticación
+  ms-autenticacion:
+    build:
+      context: ./ms_autenticacion
+      dockerfile: Dockerfile
+    container_name: ms-autenticacion
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_USER_GENERATOR: ${JWT_USER_GENERATOR}
+      SPRING_R2DBC_URL: r2dbc:mysql://mysql-auth:3306/crediya_autenticacion_db?serverTimezone=UTC
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql-auth:
+        condition: service_healthy
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      timeout: 30s
+      retries: 5
+      interval: 30s
+    restart: unless-stopped
+
+  # Ejemplo de otro microservicio (Solicitudes)
+  # ms-solicitudes:
+  #   image: ms-solicitudes:latest
+  #   container_name: ms-solicitudes
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: docker
+  #     AUTH_SERVICE_URL: http://ms-autenticacion:8080
+  #   ports:
+  #     - "8082:8080"
+  #   depends_on:
+  #     ms-autenticacion:
+  #       condition: service_healthy
+  #   networks:
+  #     - crediya-network
+
+volumes:
+  mysql_auth_data:
+    driver: local
+  mysql_loan_data:
+    driver: local
+
+networks:
+  crediya-network:
+    driver: bridge

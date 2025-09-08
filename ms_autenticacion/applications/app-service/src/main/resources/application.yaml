@@ -1,0 +1,45 @@
+##Spring Configuration
+server:
+  port: 8080
+spring:
+  application:
+    name: ms_autenticacion
+  devtools:
+    add-properties: false
+  h2:
+    console:
+      enabled: true
+      path: /h2
+  profiles:
+    include: null
+  r2dbc:
+    url: ${SPRING_R2DBC_URL:r2dbc:mysql://localhost:3306/crediya_autenticacion_db?&serverTimezone=UTC}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+logging:
+  level:
+    web: info
+security:
+  jwt:
+    key:
+      private-key: ${JWT_PRIVATE_KEY:defaultSecretKeyForJwtSigning}
+    user:
+      generator: ${JWT_USER_GENERATOR:AUTH0JWT_MS_AUTENTICACION}
+    token:
+      validity: PT10M  # 10 minutos
+      # validity: PT1H   # 1 hora
+      # validity: P1D    # 1 día (actual)
+      not-before: PT0S  # Sin retraso
+      generate-jwt-id: true
+    claims:
+      authorities-key: authorities
+      role-prefix: ROLE_
