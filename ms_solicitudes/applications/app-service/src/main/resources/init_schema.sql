@@ -7,9 +7,9 @@
 -- Crear base de datos si no existe
 -- ============================
 CREATE
-    DATABASE IF NOT EXISTS crediya_db;
+    DATABASE IF NOT EXISTS crediya_solicitudes_db;
 USE
-    crediya_db;
+    crediya_solicitudes_db;
 
 
 -- ============================
