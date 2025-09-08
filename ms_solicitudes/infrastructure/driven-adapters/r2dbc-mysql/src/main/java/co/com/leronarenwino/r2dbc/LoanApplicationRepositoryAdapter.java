@@ -43,6 +43,20 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
     }
 
     @Override
+    public Mono<Void> updateLoanApplication(Long id, String status) {
+        return loanApplicationR2DbcRepository.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan application not found")))
+                .flatMap(existingLoanApplication ->
+                        getLoanStatusIdByName(status)
+                                .flatMap(loanStatusId -> {
+                                    existingLoanApplication.setIdEstado(loanStatusId);
+                                    return loanApplicationR2DbcRepository.save(existingLoanApplication);
+                                })
+                )
+                .then();
+    }
+
+    @Override
     public Flux<LoanApplication> findAllPaginated(int page, int size) {
         log.info("Getting loan applications with pagination - page: {}, size: {}", page, size);
 

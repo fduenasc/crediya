@@ -7,6 +7,7 @@ import reactor.core.publisher.Mono;
 
 public interface LoanApplicationRepository {
     Mono<Void> save(LoanApplication loanApplication);
+    Mono<Void> updateLoanApplication(Long id, String status);
     Flux<LoanApplication> findAllPaginated(int page, int size);
     Mono<LoanType> getLoanTypeByName(String loanType);
     Mono<Long> count();

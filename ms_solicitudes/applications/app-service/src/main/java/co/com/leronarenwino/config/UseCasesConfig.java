@@ -4,6 +4,7 @@ import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
 import co.com.leronarenwino.usecase.GetLoanApplicationUseCase;
 import co.com.leronarenwino.usecase.GetLoanTypeUseCase;
 import co.com.leronarenwino.usecase.SaveLoanApplicationUseCase;
+import co.com.leronarenwino.usecase.UpdateLoanApplicationUseCase;
 import org.springframework.context.annotation.*;
 
 @Configuration
@@ -19,6 +20,13 @@ public class UseCasesConfig {
     public SaveLoanApplicationUseCase saveLoanApplicationUseCase(
             LoanApplicationRepository loanApplicationRepository) {
         return new SaveLoanApplicationUseCase(loanApplicationRepository);
+    }
+
+    @Bean
+    @Primary
+    public UpdateLoanApplicationUseCase updateLoanApplicationUseCase(
+            LoanApplicationRepository loanApplicationRepository) {
+        return new UpdateLoanApplicationUseCase(loanApplicationRepository);
     }
 
     @Bean
