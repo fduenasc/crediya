@@ -13,7 +13,7 @@ spring:
   profiles:
     include: null
   r2dbc:
-    url: r2dbc:mysql://localhost:3307/crediya_solicitudes_db?&serverTimezone=UTC
+    url: ${SPRING_R2DBC_URL:r2dbc:mysql://localhost:3307/crediya_solicitudes_db?&serverTimezone=UTC}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
@@ -23,5 +23,5 @@ security:
     protected-password: "[PROTECTED]"
 adapter:
   restconsumer:
-    url: "http://localhost:8080"
+    url: ${MS_AUTENTICACION_URL:http://localhost:8080}
     timeout: 5000
