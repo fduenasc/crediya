@@ -17,6 +17,7 @@ public class SecurityConfig {
 
     private static final String BASE_URL = "/api/v1";
     private static final String LOAN_APPLICATION_URL = BASE_URL + "/loan-application";
+    private static final String USER_URL = BASE_URL + "/user";
     private static final String LOAN_APPLICATION_URL_ID = LOAN_APPLICATION_URL + "/{id}";
     private static final String ADVISOR_ROLE = "ADVISOR";
     private static final String CLIENT_ROLE = "CLIENT";
@@ -44,7 +45,7 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST,LOAN_APPLICATION_URL).hasRole(CLIENT_ROLE)
                         .pathMatchers(HttpMethod.GET,LOAN_APPLICATION_URL).hasRole(ADVISOR_ROLE)
                         .pathMatchers(HttpMethod.PUT, LOAN_APPLICATION_URL_ID).hasRole(ADVISOR_ROLE)
-                        .pathMatchers(HttpMethod.GET,"/api/v1/user").hasAnyRole(CLIENT_ROLE, ADVISOR_ROLE)
+                        .pathMatchers(HttpMethod.GET,USER_URL).hasAnyRole(CLIENT_ROLE, ADVISOR_ROLE)
 
                         // Cualquier otra petición requiere autenticación
                         .anyExchange().authenticated()
