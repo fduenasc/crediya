@@ -3,10 +3,10 @@ package co.com.leronarenwino.r2dbc;
 import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.model.LoanType;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
-import co.com.leronarenwino.r2dbc.entity.SolicitudEntity;
-import co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper;
 import co.com.leronarenwino.r2dbc.entity.EstadoEntity;
+import co.com.leronarenwino.r2dbc.entity.SolicitudEntity;
 import co.com.leronarenwino.r2dbc.entity.TipoPrestamoEntity;
+import co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -30,6 +30,14 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
         this.loanApplicationR2DbcRepository = loanApplicationR2DbcRepository;
         this.loanTypeR2DbcRepository = loanTypeR2DbcRepository;
         this.loanStatusR2DbcRepository = loanStatusR2DbcRepository;
+    }
+
+    @Override
+    public Mono<LoanApplication> getLoanApplicationById(Long id) {
+        return loanApplicationR2DbcRepository.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan application not found")))
+                .flatMap(this::mapToLoanApplication)
+                .doOnNext(loanApplication -> log.info("Found loan application: {}", loanApplication));
     }
 
     @Override

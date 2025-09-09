@@ -30,6 +30,7 @@ import java.util.Set;
 
 import static co.com.leronarenwino.api.dto.GenericResponse.success;
 import static co.com.leronarenwino.api.dto.LoanApplicationResponse.toLoanApplicationResponse;
+import static co.com.leronarenwino.api.dto.NotificationResponse.buildNotificationMessage;
 
 @Component
 @Tag(name = "Loan Applications", description = "Operations related to loan applications management")
@@ -469,18 +470,23 @@ public class Handler {
                                 .switchIfEmpty(Mono.error(new IllegalArgumentException("The request body cannot be empty")))
                                 .flatMap(this::validateUpdateLoanApplicationRequest)
                                 .doOnNext(request -> log.info("Update payload for loan application {}: {}", id, request))
-                                .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus()))
-                                .then(Mono.defer(() -> ServerResponse.ok()
+                                .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus())
+                                        .then(getLoanApplicationUseCase.getLoanApplicationById(id))
+                                        .map(NotificationResponse::toNotificationResponse))
+                                .flatMap(notificationResponse ->
+                                        buildNotificationMessage(notificationResponse)
+                                                .flatMap(notificationMessage ->
+                                                        sendNotificationUseCase.send(notificationMessage)
+                                                                .publishOn(Schedulers.boundedElastic())
+                                                                .doOnSuccess(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId))
+                                                                .doOnError(error -> log.error("Error sending notification to SQS: {}", error.getMessage()))
+                                                                .onErrorResume(error -> Mono.empty())
+                                                )
+                                )
+                                .then(ServerResponse.ok()
                                         .contentType(MediaType.APPLICATION_JSON)
-                                        .bodyValue(success(null, "Loan application loanStatus successfully updated"))))
-                                .publishOn(Schedulers.boundedElastic())
-                                .doOnSuccess(ignored -> {
-                                    log.info("Loan application loanStatus successfully updated!");
-                                    sendNotificationUseCase.send("Loan application with ID " + id + " has been updated")
-                                            .subscribe(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId),
-                                                    error -> log.error("Error sending notification to SQS: {}", error.getMessage()));
-                                }));
-
+                                        .bodyValue(success(null, "Loan application loanStatus successfully updated")))
+                                .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
     }
 
     public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {

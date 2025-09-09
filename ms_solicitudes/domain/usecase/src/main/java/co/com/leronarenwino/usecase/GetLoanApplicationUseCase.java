@@ -8,6 +8,10 @@ import reactor.core.publisher.Mono;
 public record GetLoanApplicationUseCase(
         LoanApplicationRepository loanApplicationRepository
 ) {
+    public Mono<LoanApplication> getLoanApplicationById(Long id) {
+        return loanApplicationRepository.getLoanApplicationById(id);
+    }
+
     public Flux<LoanApplication> getAllLoanApplications(int page, int size) {
         return loanApplicationRepository.findAllPaginated(page, size);
     }
