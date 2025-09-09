@@ -3,10 +3,7 @@ package co.com.leronarenwino.api;
 import co.com.leronarenwino.api.dto.*;
 import co.com.leronarenwino.consumer.RestConsumer;
 import co.com.leronarenwino.model.LoanApplication;
-import co.com.leronarenwino.usecase.GetLoanApplicationUseCase;
-import co.com.leronarenwino.usecase.GetLoanTypeUseCase;
-import co.com.leronarenwino.usecase.SaveLoanApplicationUseCase;
-import co.com.leronarenwino.usecase.UpdateLoanApplicationUseCase;
+import co.com.leronarenwino.usecase.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Set;
@@ -46,6 +44,7 @@ public class Handler {
 
     private final GetLoanTypeUseCase getLoanTypeUseCase;
     private final RestConsumer restConsumer;
+    private final SendNotificationUseCase sendNotificationUseCase;
 
     private final Validator validator;
 
@@ -55,6 +54,7 @@ public class Handler {
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
             RestConsumer restConsumer,
+            SendNotificationUseCase sendNotificationUseCase,
             Validator validator
     ) {
         this.saveLoanApplicationUseCase = saveLoanApplicationUseCase;
@@ -62,6 +62,7 @@ public class Handler {
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
         this.restConsumer = restConsumer;
+        this.sendNotificationUseCase = sendNotificationUseCase;
         this.validator = validator;
     }
 
@@ -473,7 +474,13 @@ public class Handler {
                                 .then(Mono.defer(() -> ServerResponse.ok()
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .bodyValue(success(null, "Loan application loanStatus successfully updated"))))
-                                .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
+                                .publishOn(Schedulers.boundedElastic())
+                                .doOnSuccess(ignored -> {
+                                    log.info("Loan application loanStatus successfully updated!");
+                                    sendNotificationUseCase.send("Loan application with ID " + id + " has been updated")
+                                            .subscribe(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId),
+                                                    error -> log.error("Error sending notification to SQS: {}", error.getMessage()));
+                                }));
 
     }
 
