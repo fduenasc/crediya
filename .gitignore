@@ -336,4 +336,10 @@ gradle-app.setting
 build-cache
 
 # LocalStack data volume
-.volume/
+volume/
+
+# VSCode settings
+.vscode/
+
+# Local environment variables file
+.env
