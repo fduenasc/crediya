@@ -19,6 +19,7 @@ public class SecurityConfig {
     private static final String LOAN_APPLICATION_URL = BASE_URL + "/loan-application";
     private static final String LOAN_APPLICATION_URL_ID = LOAN_APPLICATION_URL + "/{id}";
     private static final String ADVISOR_ROLE = "ADVISOR";
+    private static final String CLIENT_ROLE = "CLIENT";
 
     private final JwtTokenAuthenticationFilter jwtTokenAuthenticationFilter;
 
@@ -40,10 +41,10 @@ public class SecurityConfig {
                         .pathMatchers("/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
 
                         // Endpoints protegidos
-                        .pathMatchers(HttpMethod.POST,LOAN_APPLICATION_URL).hasRole("CLIENT")
+                        .pathMatchers(HttpMethod.POST,LOAN_APPLICATION_URL).hasRole(CLIENT_ROLE)
                         .pathMatchers(HttpMethod.GET,LOAN_APPLICATION_URL).hasRole(ADVISOR_ROLE)
                         .pathMatchers(HttpMethod.PUT, LOAN_APPLICATION_URL_ID).hasRole(ADVISOR_ROLE)
-                        .pathMatchers(HttpMethod.GET,"/api/v1/user").hasAnyRole("CLIENT", ADVISOR_ROLE)
+                        .pathMatchers(HttpMethod.GET,"/api/v1/user").hasAnyRole(CLIENT_ROLE, ADVISOR_ROLE)
 
                         // Cualquier otra petición requiere autenticación
                         .anyExchange().authenticated()
