@@ -1,4 +1,4 @@
-package co.com.leronarenwino.api.config;
+package co.com.leronarenwino.consumer.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

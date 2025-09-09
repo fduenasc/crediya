@@ -1,4 +1,4 @@
-package co.com.leronarenwino.api.config;
+package co.com.leronarenwino.consumer.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
