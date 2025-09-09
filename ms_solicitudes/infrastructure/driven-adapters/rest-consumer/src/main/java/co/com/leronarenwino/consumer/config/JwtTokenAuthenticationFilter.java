@@ -15,10 +15,18 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Component
 public class JwtTokenAuthenticationFilter implements WebFilter {
 
     private final RestConsumer restConsumer;
+    private final Map<String, UserDetails> tokenCache = new ConcurrentHashMap<>();
+    private final Map<String, Instant> tokenExpiryCache = new ConcurrentHashMap<>();
+    private static final Duration CACHE_DURATION = Duration.ofMinutes(5);
 
     public JwtTokenAuthenticationFilter(RestConsumer restConsumer) {
         this.restConsumer = restConsumer;
@@ -33,13 +41,15 @@ public class JwtTokenAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
-        return restConsumer.validateTokenAndGetUserDetails(token)
+        return getOrValidateUserDetails(token)
                 .flatMap(userDetails -> {
                     Authentication auth = createAuthentication(userDetails);
                     return chain.filter(exchange)
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
                 })
                 .onErrorResume(error -> {
+                    tokenCache.remove(token);
+                    tokenExpiryCache.remove(token);
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                     return exchange.getResponse().setComplete();
                 });
@@ -59,5 +69,21 @@ public class JwtTokenAuthenticationFilter implements WebFilter {
                 null,
                 userDetails.getAuthorities()
         );
+    }
+
+    private Mono<UserDetails> getOrValidateUserDetails(String token) {
+        Instant expiry = tokenExpiryCache.get(token);
+        if (expiry != null && Instant.now().isBefore(expiry)) {
+            UserDetails cachedUserDetails = tokenCache.get(token);
+            if (cachedUserDetails != null) {
+                return Mono.just(cachedUserDetails);
+            }
+        }
+
+        return restConsumer.validateTokenAndGetUserDetails(token)
+                .doOnNext(userDetails -> {
+                    tokenCache.put(token, userDetails);
+                    tokenExpiryCache.put(token, Instant.now().plus(CACHE_DURATION));
+                });
     }
 }
