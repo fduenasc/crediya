@@ -1,7 +1,6 @@
 package co.com.leronarenwino.api;
 
 import co.com.leronarenwino.api.dto.*;
-import co.com.leronarenwino.consumer.RestConsumer;
 import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.usecase.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,9 +40,9 @@ public class Handler {
     private final SaveLoanApplicationUseCase saveLoanApplicationUseCase;
     private final UpdateLoanApplicationUseCase updateLoanApplicationUseCase;
     private final GetLoanApplicationUseCase getLoanApplicationUseCase;
-
     private final GetLoanTypeUseCase getLoanTypeUseCase;
-    private final RestConsumer restConsumer;
+    private final ValidateUserUseCase validateUserUseCase;
+
     private final SendNotificationUseCase sendNotificationUseCase;
 
     private final Validator validator;
@@ -53,7 +52,7 @@ public class Handler {
             UpdateLoanApplicationUseCase updateLoanApplicationUseCase,
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
-            RestConsumer restConsumer,
+            ValidateUserUseCase validateUserUseCase,
             SendNotificationUseCase sendNotificationUseCase,
             Validator validator
     ) {
@@ -61,7 +60,7 @@ public class Handler {
         this.updateLoanApplicationUseCase = updateLoanApplicationUseCase;
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
-        this.restConsumer = restConsumer;
+        this.validateUserUseCase = validateUserUseCase;
         this.sendNotificationUseCase = sendNotificationUseCase;
         this.validator = validator;
     }
@@ -237,8 +236,8 @@ public class Handler {
     }
 
     private Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
-        return restConsumer.getUserData(loanApplication.email(), token)
-                .map(UserDataResponse::toUserData)
+        return validateUserUseCase.getDataFromValidatedUser(loanApplication.email(), token)
+                .map(UserDataResponse::toUserDataResponse)
                 .flatMap(userData ->
                         getLoanTypeUseCase.getLoanTypeByName(loanApplication.loanType())
                                 .flatMap(loanType ->
@@ -288,7 +287,7 @@ public class Handler {
                 .doOnNext(username -> log.info("Authenticated user to get data: {}", username))
                 .flatMap(email -> {
                     String token = extractTokenFromRequest(request);
-                    return restConsumer.getUserData(email, token);
+                    return validateUserUseCase.getDataFromValidatedUser(email, token);
                 })
                 .flatMap(userData -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)

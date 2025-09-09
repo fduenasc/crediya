@@ -1,8 +1,8 @@
-package co.com.leronarenwino.consumer.dto;
+package co.com.leronarenwino.model;
 
 import java.time.LocalDate;
 
-public record UserResponse(
+public record UserData(
         String name,
         String lastname,
         String email,

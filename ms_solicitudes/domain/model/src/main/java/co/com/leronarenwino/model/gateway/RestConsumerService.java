@@ -1,7 +1,8 @@
 package co.com.leronarenwino.model.gateway;
 
+import co.com.leronarenwino.model.UserData;
 import reactor.core.publisher.Mono;
 
 public interface RestConsumerService {
-    Mono<String> validateToken(String token);
+    Mono<UserData> getDataFromValidatedUser(String email, String token);
 }
