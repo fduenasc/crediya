@@ -36,6 +36,8 @@ import static co.com.leronarenwino.api.dto.NotificationResponse.buildNotificatio
 @Tag(name = "Loan Applications", description = "Operations related to loan applications management")
 public class Handler {
 
+    private static final String BODY_CANNOT_BE_EMPTY = "The request body cannot be empty";
+
     private static final Logger log = LoggerFactory.getLogger(Handler.class);
 
     private final SaveLoanApplicationUseCase saveLoanApplicationUseCase;
@@ -443,7 +445,7 @@ public class Handler {
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .doOnNext(username -> log.info("Usuario autenticado: {}", username))
                 .zipWith(serverRequest.bodyToMono(LoanApplicationRequest.class)
-                        .switchIfEmpty(Mono.error(new IllegalArgumentException("The request body cannot be empty")))
+                        .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
                         .flatMap(this::validateLoanApplicationRequest))
                 .flatMap(tuple -> {
                     String username = tuple.getT1();
@@ -467,7 +469,7 @@ public class Handler {
         return getPathVariable(serverRequest, "id")
                 .flatMap(id ->
                         serverRequest.bodyToMono(UpdateLoanApplicationRequest.class)
-                                .switchIfEmpty(Mono.error(new IllegalArgumentException("The request body cannot be empty")))
+                                .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
                                 .flatMap(this::validateUpdateLoanApplicationRequest)
                                 .doOnNext(request -> log.info("Update payload for loan application {}: {}", id, request))
                                 .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus())
@@ -487,6 +489,17 @@ public class Handler {
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .bodyValue(success(null, "Loan application loanStatus successfully updated")))
                                 .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
+    }
+
+    public Mono<ServerResponse> calculateCapacity(ServerRequest serverRequest) {
+        log.info("Post /api/v1/calculate-capacity request received");
+        return serverRequest.bodyToMono(CapacityRequest.class)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
+                .doOnNext(request -> log.info("Capacity calculation payload: {}", request))
+                .flatMap(capacityResponse -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(GenericResponse.success(capacityResponse, "Capacity calculated successfully")))
+                .doOnSuccess(ignored -> log.info("Capacity calculated successfully!"));
     }
 
     public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {

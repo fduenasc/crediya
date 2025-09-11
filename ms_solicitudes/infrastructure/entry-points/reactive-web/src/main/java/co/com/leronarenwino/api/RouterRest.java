@@ -17,7 +17,9 @@ public class RouterRest {
 
     private static final String BASE_URL = "/api/v1";
     private static final String LOAN_APPLICATION_URL = BASE_URL + "/loan-application";
-    private static final String LOAN_APPLICATION_URL_ID = LOAN_APPLICATION_URL + "/{id}";
+    private static final String USER_URL = BASE_URL + "/user";
+    private static final String LOAN_APPLICATION_ID_URL = LOAN_APPLICATION_URL + "/{id}";
+    private static final String CALCULATE_CAPACITY_URL = BASE_URL + "/calculate-capacity";
 
     @Bean
     @RouterOperations({
@@ -38,8 +40,9 @@ public class RouterRest {
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
         return route(POST(LOAN_APPLICATION_URL), handler::saveLoanApplication)
-                .andRoute(PUT(LOAN_APPLICATION_URL_ID), handler::updateLoanApplicationStatus)
+                .andRoute(PUT(LOAN_APPLICATION_ID_URL), handler::updateLoanApplicationStatus)
                 .andRoute(GET(LOAN_APPLICATION_URL), handler::getAllLoanApplications)
-                .andRoute(GET("/api/v1/user"), handler::getUserData);
+                .andRoute(GET(USER_URL), handler::getUserData)
+                .andRoute(POST(CALCULATE_CAPACITY_URL), handler::calculateCapacity);
     }
 }
