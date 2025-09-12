@@ -28,3 +28,6 @@ adapter:
   sqs:
     region: "us-east-1"
     queueUrl: "https://sqs.us-east-1.amazonaws.com/646523381259/notifications"
+  lambda:
+    region: "us-east-1"
+    function-name: "capacity-calculator-func"

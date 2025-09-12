@@ -1,6 +1,7 @@
 apply plugin: 'org.springframework.boot'
 
 dependencies {
+	implementation project(':lambda-invoker')
 	implementation project(':sqs-sender')
 	implementation project(':r2dbc-mysql')
 	implementation project(':rest-consumer')

@@ -44,6 +44,7 @@ public class Handler {
     private final UpdateLoanApplicationUseCase updateLoanApplicationUseCase;
     private final GetLoanApplicationUseCase getLoanApplicationUseCase;
     private final GetLoanTypeUseCase getLoanTypeUseCase;
+    private final CalculateCapacityUseCase calculateCapacityUseCase;
     private final ValidateUserUseCase validateUserUseCase;
 
     private final SendNotificationUseCase sendNotificationUseCase;
@@ -55,6 +56,7 @@ public class Handler {
             UpdateLoanApplicationUseCase updateLoanApplicationUseCase,
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
+            CalculateCapacityUseCase calculateCapacityUseCase,
             ValidateUserUseCase validateUserUseCase,
             SendNotificationUseCase sendNotificationUseCase,
             Validator validator
@@ -63,6 +65,7 @@ public class Handler {
         this.updateLoanApplicationUseCase = updateLoanApplicationUseCase;
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
+        this.calculateCapacityUseCase = calculateCapacityUseCase;
         this.validateUserUseCase = validateUserUseCase;
         this.sendNotificationUseCase = sendNotificationUseCase;
         this.validator = validator;
@@ -214,9 +217,7 @@ public class Handler {
     )
     public Mono<ServerResponse> getAllLoanApplications(ServerRequest serverRequest) {
         log.info("Get /api/v1/loan-application request received");
-        return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> securityContext.getAuthentication().getName())
-                .doOnNext(username -> log.info("Authenticated user: {}", username))
+        return getAuthenticatedUsername()
                 .then(Mono.fromCallable(() -> extractPaginationAndFilterParams(serverRequest)))
                 .doOnNext(params -> log.info("Parameters - page: {}, size: {}, status: {}",
                         params.page(), params.size(), params.status()))
@@ -493,9 +494,15 @@ public class Handler {
 
     public Mono<ServerResponse> calculateCapacity(ServerRequest serverRequest) {
         log.info("Post /api/v1/calculate-capacity request received");
-        return serverRequest.bodyToMono(CapacityRequest.class)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
-                .doOnNext(request -> log.info("Capacity calculation payload: {}", request))
+        return getAuthenticatedUsername()
+                .zipWith(serverRequest.bodyToMono(CapacityRequest.class)
+                        .map(CapacityRequest::toDomain)
+                        .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY))))
+                .flatMap(tuple -> calculateCapacityUseCase.calculateCapacity(
+                        tuple.getT2(),
+                        tuple.getT1(),
+                        extractTokenFromRequest(serverRequest)
+                ))
                 .flatMap(capacityResponse -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(GenericResponse.success(capacityResponse, "Capacity calculated successfully")))
@@ -504,6 +511,12 @@ public class Handler {
 
     public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {
         return Mono.just(Long.valueOf(serverRequest.pathVariable(id)));
+    }
+
+    private Mono<String> getAuthenticatedUsername() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> securityContext.getAuthentication().getName())
+                .doOnNext(username -> log.info("Authenticated user: {}", username));
     }
 
     Mono<LoanApplicationRequest> validateLoanApplicationRequest(LoanApplicationRequest loanApplicationRequest) {

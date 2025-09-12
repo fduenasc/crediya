@@ -26,3 +26,5 @@ include ':rest-consumer'
 project(':rest-consumer').projectDir = file('./infrastructure/driven-adapters/rest-consumer')
 include ':sqs-sender'
 project(':sqs-sender').projectDir = file('./infrastructure/driven-adapters/sqs-sender')
+include ':lambda-invoker'
+project(':lambda-invoker').projectDir = file('./infrastructure/driven-adapters/lambda-invoker')
