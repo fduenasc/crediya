@@ -108,6 +108,14 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 .doOnNext(exists -> log.info("Status '{}' exists: {}", status, exists));
     }
 
+    @Override
+    public Mono<Boolean> isValidateAutomaticEnableToLoanType(String loanType) {
+        return loanTypeR2DbcRepository.findByNombre(loanType)
+                .map(TipoPrestamoEntity::getValidacionAutomatica)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException(LOAN_TYPE_NOT_FOUND)))
+                .doOnNext(calculoAutomatico -> log.info("Loan type '{}' has automatic calculation: {}", loanType, calculoAutomatico));
+    }
+
     private Mono<LoanApplication> mapToLoanApplication(SolicitudEntity solicitudEntity) {
         return Mono.zip(
                 Mono.just(solicitudEntity),

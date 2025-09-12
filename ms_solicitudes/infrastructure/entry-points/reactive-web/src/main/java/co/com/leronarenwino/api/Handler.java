@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuples;
 
 import java.util.List;
 import java.util.Set;
@@ -44,7 +45,6 @@ public class Handler {
     private final UpdateLoanApplicationUseCase updateLoanApplicationUseCase;
     private final GetLoanApplicationUseCase getLoanApplicationUseCase;
     private final GetLoanTypeUseCase getLoanTypeUseCase;
-    private final CalculateCapacityUseCase calculateCapacityUseCase;
     private final ValidateUserUseCase validateUserUseCase;
 
     private final SendNotificationUseCase sendNotificationUseCase;
@@ -56,7 +56,6 @@ public class Handler {
             UpdateLoanApplicationUseCase updateLoanApplicationUseCase,
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
-            CalculateCapacityUseCase calculateCapacityUseCase,
             ValidateUserUseCase validateUserUseCase,
             SendNotificationUseCase sendNotificationUseCase,
             Validator validator
@@ -65,7 +64,6 @@ public class Handler {
         this.updateLoanApplicationUseCase = updateLoanApplicationUseCase;
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
-        this.calculateCapacityUseCase = calculateCapacityUseCase;
         this.validateUserUseCase = validateUserUseCase;
         this.sendNotificationUseCase = sendNotificationUseCase;
         this.validator = validator;
@@ -454,11 +452,11 @@ public class Handler {
                     if (!username.equalsIgnoreCase(request.email())) {
                         return Mono.error(new IllegalArgumentException("User email does not match authenticated user"));
                     }
-                    return Mono.just(request);
+                    return Mono.just(Tuples.of(username, request));
                 })
-                .doOnNext(loanApplication -> log.info("Loan application payload: {}", loanApplication))
-                .map(LoanApplicationRequest::toDomain)
-                .flatMap(saveLoanApplicationUseCase::saveLoanApplication)
+                .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
+                .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
+                        .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData)))
                 .then(Mono.defer(() -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(success(null, "Loan application successfully registered"))))
@@ -490,23 +488,6 @@ public class Handler {
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .bodyValue(success(null, "Loan application loanStatus successfully updated")))
                                 .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
-    }
-
-    public Mono<ServerResponse> calculateCapacity(ServerRequest serverRequest) {
-        log.info("Post /api/v1/calculate-capacity request received");
-        return getAuthenticatedUsername()
-                .zipWith(serverRequest.bodyToMono(CapacityRequest.class)
-                        .map(CapacityRequest::toDomain)
-                        .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY))))
-                .flatMap(tuple -> calculateCapacityUseCase.calculateCapacity(
-                        tuple.getT2(),
-                        tuple.getT1(),
-                        extractTokenFromRequest(serverRequest)
-                ))
-                .flatMap(capacityResponse -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(GenericResponse.success(capacityResponse, "Capacity calculated successfully")))
-                .doOnSuccess(ignored -> log.info("Capacity calculated successfully!"));
     }
 
     public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {

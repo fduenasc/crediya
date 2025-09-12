@@ -1,6 +1,6 @@
 package co.com.leronarenwino.config;
 
-import co.com.leronarenwino.model.gateway.CapacityCalculatorGateway;
+import co.com.leronarenwino.model.gateway.CapacityCalculatorService;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
 import co.com.leronarenwino.model.gateway.RestConsumerService;
 import co.com.leronarenwino.model.gateway.SenderService;
@@ -18,8 +18,9 @@ public class UseCasesConfig {
     @Bean
     @Primary
     public SaveLoanApplicationUseCase saveLoanApplicationUseCase(
-            LoanApplicationRepository loanApplicationRepository) {
-        return new SaveLoanApplicationUseCase(loanApplicationRepository);
+            LoanApplicationRepository loanApplicationRepository,
+            CapacityCalculatorService capacityCalculatorService) {
+        return new SaveLoanApplicationUseCase(loanApplicationRepository, capacityCalculatorService);
     }
 
     @Bean
@@ -56,12 +57,4 @@ public class UseCasesConfig {
             LoanApplicationRepository loanApplicationRepository) {
         return new GetLoanTypeUseCase(loanApplicationRepository);
     }
-
-    @Bean
-    @Primary
-    public CalculateCapacityUseCase calculateCapacityUseCase(
-            CapacityCalculatorGateway capacityCalculatorGateway, RestConsumerService restConsumerService) {
-        return new CalculateCapacityUseCase(capacityCalculatorGateway, restConsumerService);
-    }
-
 }

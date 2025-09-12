@@ -1,10 +1,10 @@
 package co.com.leronarenwino.lambdainvoker;
 
 import co.com.leronarenwino.lambdainvoker.config.LambdaInvokerProperties;
-import co.com.leronarenwino.model.Capacity;
 import co.com.leronarenwino.model.CapacityResponse;
+import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.model.UserData;
-import co.com.leronarenwino.model.gateway.CapacityCalculatorGateway;
+import co.com.leronarenwino.model.gateway.CapacityCalculatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.lambda.LambdaAsyncClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 
 @Service
-public class LambdaInvoker implements CapacityCalculatorGateway {
+public class LambdaInvoker implements CapacityCalculatorService {
 
     private static final Logger log = LoggerFactory.getLogger(LambdaInvoker.class);
 
@@ -27,10 +27,10 @@ public class LambdaInvoker implements CapacityCalculatorGateway {
     }
 
     @Override
-    public Mono<CapacityResponse> calculateCapacity(Capacity request, UserData userData) {
+    public Mono<CapacityResponse> calculateCapacity(LoanApplication loanApplication, UserData userData) {
         log.info("Invoking Lambda function: {} for capacity calculation", properties.functionName());
 
-        String payload = buildRequestPayload(request, userData);
+        String payload = buildRequestPayload(loanApplication, userData);
 
         return Mono.fromFuture(() -> lambdaClient.invoke(InvokeRequest.builder()
                         .functionName(properties.functionName())
@@ -42,7 +42,7 @@ public class LambdaInvoker implements CapacityCalculatorGateway {
     }
 
 
-    private String buildRequestPayload(Capacity request, UserData userData) {
+    private String buildRequestPayload(LoanApplication loanApplication, UserData userData) {
         return String.format("""
                         {
                             "requestedAmount": %s,
@@ -52,9 +52,9 @@ public class LambdaInvoker implements CapacityCalculatorGateway {
                             "name": "%s"
                         }
                         """,
-                request.requestedAmount(),
-                request.termInMonths(),
-                request.loanType(),
+                loanApplication.loanAmount(),
+                loanApplication.termInMonths(),
+                loanApplication.loanType(),
                 userData.baseSalary(),
                 userData.name()
         );

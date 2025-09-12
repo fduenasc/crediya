@@ -21,4 +21,6 @@ public interface LoanApplicationRepository {
     Mono<Long> countByStatus(String status);
 
     Mono<Boolean> existsByStatus(String status);
+
+    Mono<Boolean> isValidateAutomaticEnableToLoanType(String loanType);
 }
