@@ -1,7 +1,7 @@
 package co.com.leronarenwino.model;
 
 public record Capacity(
-        String approved,
+        String loanStatus,
         Double maxLoanAmount,
         Double monthlyPayment,
         String riskLevel

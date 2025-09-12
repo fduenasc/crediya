@@ -66,7 +66,7 @@ public class LambdaInvoker implements CapacityCalculatorService {
 
     private Capacity parseCapacityResponse(String jsonResponse) {
         try {
-            String approved = extractStringValue(jsonResponse, "approved");
+            String approved = extractStringValue(jsonResponse, "loanStatus");
             Double maxLoanAmount = extractDoubleValue(jsonResponse, "maxLoanAmount");
             Double monthlyPayment = extractDoubleValue(jsonResponse, "monthlyPayment");
             String riskLevel = extractStringValue(jsonResponse, "riskLevel");
