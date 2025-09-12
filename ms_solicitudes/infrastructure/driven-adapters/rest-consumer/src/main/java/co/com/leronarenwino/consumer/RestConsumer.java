@@ -2,7 +2,7 @@ package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.dto.GenericResponse;
 import co.com.leronarenwino.model.UserData;
-import co.com.leronarenwino.model.gateway.RestConsumerService;
+import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 import static co.com.leronarenwino.consumer.TokenValidationRequest.create;
 
 @Component
-public class RestConsumer implements RestConsumerService {
+public class RestConsumer implements ClientValidatorService {
 
     private static final Logger log = LoggerFactory.getLogger(RestConsumer.class);
     private static final String VALIDATION_ENDPOINT = "/api/v1/validate";

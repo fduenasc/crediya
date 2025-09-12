@@ -2,7 +2,7 @@ package co.com.leronarenwino.config;
 
 import co.com.leronarenwino.model.gateway.CapacityCalculatorService;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
-import co.com.leronarenwino.model.gateway.RestConsumerService;
+import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import co.com.leronarenwino.model.gateway.SenderService;
 import co.com.leronarenwino.usecase.*;
 import org.springframework.context.annotation.*;
@@ -40,8 +40,8 @@ public class UseCasesConfig {
     @Bean
     @Primary
     public ValidateUserUseCase validateUserUseCase(
-            RestConsumerService restConsumerService) {
-        return new ValidateUserUseCase(restConsumerService);
+            ClientValidatorService clientValidatorService) {
+        return new ValidateUserUseCase(clientValidatorService);
     }
 
     @Bean
