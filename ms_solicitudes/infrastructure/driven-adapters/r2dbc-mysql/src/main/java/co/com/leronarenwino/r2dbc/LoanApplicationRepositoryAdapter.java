@@ -41,7 +41,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
     }
 
     @Override
-    public Mono<Void> save(LoanApplication loanApplication) {
+    public Mono<Void> saveLoanApplication(LoanApplication loanApplication) {
         log.info("Guardando solicitud: {}", loanApplication);
         return getLoanTypeIdByName(loanApplication.loanType())
                 .flatMap(loanTypeId -> getLoanStatusIdByName(loanApplication.loanStatus())

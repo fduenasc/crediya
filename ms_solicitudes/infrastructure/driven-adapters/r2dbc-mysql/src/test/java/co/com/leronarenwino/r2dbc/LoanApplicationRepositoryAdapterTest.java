@@ -31,7 +31,7 @@ class LoanApplicationRepositoryAdapterTest {
     }
 
     @Test
-    void saveSuccessfullyTest() {
+    void saveLoanApplicationSuccessfullyTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
 
         TipoPrestamoEntity tipoEntity = new TipoPrestamoEntity();
@@ -50,24 +50,24 @@ class LoanApplicationRepositoryAdapterTest {
         Mockito.when(loanApplicationRepository.save(Mockito.any(SolicitudEntity.class)))
                 .thenReturn(Mono.just(savedEntity));
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .verifyComplete();
     }
 
     @Test
-    void saveLoanTypeNotFoundTest() {
+    void saveLoanApplicationLoanTypeNotFoundTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "INEXISTENTE", "PENDIENTE");
 
         Mockito.when(loanTypeRepository.findAll()).thenReturn(Flux.empty());
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
                         e.getMessage().equals("Loan type not found"))
                 .verify();
     }
 
     @Test
-    void saveLoanStatusNotFoundTest() {
+    void saveLoanApplicationLoanStatusNotFoundTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "PERSONAL", "INEXISTENTE");
 
         TipoPrestamoEntity tipoEntity = new TipoPrestamoEntity();
@@ -77,14 +77,14 @@ class LoanApplicationRepositoryAdapterTest {
         Mockito.when(loanTypeRepository.findAll()).thenReturn(Flux.just(tipoEntity));
         Mockito.when(loanStatusRepository.findAll()).thenReturn(Flux.empty());
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
                         e.getMessage().equals("Loan status not found"))
                 .verify();
     }
 
     @Test
-    void saveCaseInsensitiveMatchTest() {
+    void saveLoanApplicationCaseInsensitiveMatchTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "personal", "pendiente");
 
         TipoPrestamoEntity tipoEntity = new TipoPrestamoEntity();
@@ -102,12 +102,12 @@ class LoanApplicationRepositoryAdapterTest {
         Mockito.when(loanApplicationRepository.save(Mockito.any(SolicitudEntity.class)))
                 .thenReturn(Mono.just(savedEntity));
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .verifyComplete();
     }
 
     @Test
-    void saveRepositoryErrorTest() {
+    void saveLoanApplicationRepositoryErrorTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
 
         TipoPrestamoEntity tipoEntity = new TipoPrestamoEntity();
@@ -123,14 +123,14 @@ class LoanApplicationRepositoryAdapterTest {
         Mockito.when(loanApplicationRepository.save(Mockito.any(SolicitudEntity.class)))
                 .thenReturn(Mono.error(new RuntimeException("Database error")));
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .expectErrorMatches(e -> e instanceof RuntimeException &&
                         e.getMessage().equals("Database error"))
                 .verify();
     }
 
     @Test
-    void saveMultipleLoanTypesFilterCorrectlyTest() {
+    void saveLoanApplicationMultipleLoanTypesFilterCorrectlyTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
 
         TipoPrestamoEntity tipo1 = new TipoPrestamoEntity();
@@ -152,7 +152,7 @@ class LoanApplicationRepositoryAdapterTest {
         Mockito.when(loanApplicationRepository.save(Mockito.any(SolicitudEntity.class)))
                 .thenReturn(Mono.just(savedEntity));
 
-        StepVerifier.create(adapter.save(loanApplication))
+        StepVerifier.create(adapter.saveLoanApplication(loanApplication))
                 .verifyComplete();
     }
 

@@ -23,7 +23,7 @@ class SaveLoanApplicationUseCaseTest {
     void saveLoanApplicationSuccesfullyTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "Personal", "Pendiente");
 
-        Mockito.when(loanApplicationRepository.save(loanApplication))
+        Mockito.when(loanApplicationRepository.saveLoanApplication(loanApplication))
                 .thenReturn(Mono.empty());
 
         StepVerifier.create(saveUseCase.saveLoanApplication(loanApplication))
@@ -34,7 +34,7 @@ class SaveLoanApplicationUseCaseTest {
     void saveLoanApplicationRepositoryThrowExceptionTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 12345678L, "nedstark@winterfell.wo", "Personal", "Pendiente");
 
-        Mockito.when(loanApplicationRepository.save(loanApplication))
+        Mockito.when(loanApplicationRepository.saveLoanApplication(loanApplication))
                 .thenReturn(Mono.error(new RuntimeException("DB error")));
 
         StepVerifier.create(saveUseCase.saveLoanApplication(loanApplication))

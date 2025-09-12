@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 public interface LoanApplicationRepository {
     Mono<LoanApplication> getLoanApplicationById(Long id);
 
-    Mono<Void> save(LoanApplication loanApplication);
+    Mono<Void> saveLoanApplication(LoanApplication loanApplication);
 
     Mono<Void> updateLoanApplication(Long id, String status);
 

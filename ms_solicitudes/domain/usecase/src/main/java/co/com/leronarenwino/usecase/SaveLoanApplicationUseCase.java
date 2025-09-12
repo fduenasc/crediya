@@ -8,6 +8,6 @@ public record SaveLoanApplicationUseCase(
         LoanApplicationRepository loanApplicationRepository
 ) {
     public Mono<Void> saveLoanApplication(LoanApplication loanApplication) {
-        return loanApplicationRepository.save(loanApplication);
+        return loanApplicationRepository.saveLoanApplication(loanApplication);
     }
 }
