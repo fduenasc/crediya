@@ -17,9 +17,9 @@ public record SaveLoanApplicationUseCase(
                 .flatMap(isValid -> {
                     if (Boolean.TRUE.equals(isValid)) {
                         return loanApplicationRepository.getLoanTypeByName(loanApplication.loanType())
-                                .flatMap(loanType -> capacityCalculatorService.calculateCapacity(loanApplication, userData)
-                                        .flatMap(capacityResponse -> loanApplicationRepository.saveLoanApplication(updateLoanStatus(loanApplication, "APROBADA")))
-                                        .then());
+                                .flatMap(loanType -> capacityCalculatorService.calculateCapacity(loanApplication, userData, loanType))
+                                .flatMap(capacity -> loanApplicationRepository.saveLoanApplication(updateLoanStatus(loanApplication, capacity.approved())))
+                                .then();
                     } else {
                         return loanApplicationRepository.saveLoanApplication(loanApplication)
                                 .then();
