@@ -456,10 +456,12 @@ public class Handler {
                 })
                 .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
                 .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
-                        .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData)))
-                .then(Mono.defer(() -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(success(null, "Loan application successfully registered"))))
+                        .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData))
+                        .doOnSuccess(capacity -> log.info("Loan application saved successfully with capacity: {}", capacity))
+                        .flatMap(capacity -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(success(capacity, "Loan application successfully registered")))
+                )
                 .doOnSuccess(ignored -> log.info("Loan application successfully registered!"));
     }
 
