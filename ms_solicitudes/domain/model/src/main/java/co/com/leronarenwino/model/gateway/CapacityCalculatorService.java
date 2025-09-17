@@ -6,6 +6,8 @@ import co.com.leronarenwino.model.LoanType;
 import co.com.leronarenwino.model.UserData;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 public interface CapacityCalculatorService {
-    Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType);
+    Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications);
 }

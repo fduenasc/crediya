@@ -7,6 +7,8 @@ import co.com.leronarenwino.model.gateway.CapacityCalculatorService;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 import static co.com.leronarenwino.model.Capacity.pendingCapacity;
 import static co.com.leronarenwino.model.LoanApplication.updateLoanStatus;
 
@@ -19,7 +21,7 @@ public record SaveLoanApplicationUseCase(
                 .flatMap(isValid -> {
                     if (Boolean.TRUE.equals(isValid)) {
                         return loanApplicationRepository.getLoanTypeByName(loanApplication.loanType())
-                                .flatMap(loanType -> capacityCalculatorService.calculateCapacity(loanApplication, userData, loanType))
+                                .flatMap(loanType -> capacityCalculatorService.calculateCapacity(loanApplication, userData, loanType, List.of(loanApplication)))
                                 .flatMap(capacity -> {
                                     LoanApplication updatedApplication = updateLoanStatus(loanApplication, capacity.loanStatus());
                                     return loanApplicationRepository.saveLoanApplication(updatedApplication)

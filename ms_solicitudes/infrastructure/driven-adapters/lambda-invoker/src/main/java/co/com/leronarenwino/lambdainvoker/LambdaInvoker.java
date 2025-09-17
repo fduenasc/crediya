@@ -18,6 +18,8 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaAsyncClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 
+import java.util.List;
+
 @Service
 public class LambdaInvoker implements CapacityCalculatorService {
 
@@ -34,7 +36,7 @@ public class LambdaInvoker implements CapacityCalculatorService {
     }
 
     @Override
-    public Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType) {
+    public Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
         log.info("Invoking Lambda function: {} for capacity calculation", properties.functionName());
 
         return buildRequestPayload(loanApplication, userData, loanType)
