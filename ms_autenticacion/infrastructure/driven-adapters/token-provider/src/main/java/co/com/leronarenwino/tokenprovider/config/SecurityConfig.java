@@ -46,7 +46,6 @@ public class SecurityConfig {
 
                         // Endpoints protegidos
                         .pathMatchers(HttpMethod.POST, "/api/v1/users").hasAnyRole("ADMIN", "ADVISOR")
-                        .pathMatchers(HttpMethod.GET, "/api/v1/user/**").hasAnyRole("ADMIN", "ADVISOR")
 
                         // Cualquier otra petición requiere autenticación
                         .anyExchange().authenticated()
