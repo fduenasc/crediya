@@ -24,7 +24,7 @@ public class SQSSenderConfig {
                 .build();
     }
 
-    private AwsCredentialsProviderChain getProviderChain() {
+    protected AwsCredentialsProviderChain getProviderChain() {
         return AwsCredentialsProviderChain.builder()
                 .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
@@ -35,7 +35,7 @@ public class SQSSenderConfig {
                 .build();
     }
 
-    private URI resolveEndpoint(SQSSenderProperties properties) {
+    protected URI resolveEndpoint(SQSSenderProperties properties) {
         if (properties.endpoint() != null) {
             return URI.create(properties.endpoint());
         }
