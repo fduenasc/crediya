@@ -12,6 +12,8 @@ public interface LoanApplicationRepository {
 
     Mono<Void> updateLoanApplication(Long id, String status);
 
+    Flux<LoanApplication> findAllApprovedLoansApplicationsByEmail(String email);
+
     Flux<LoanApplication> findAllPaginated(int page, int size);
 
     Mono<LoanType> getLoanTypeByName(String loanType);

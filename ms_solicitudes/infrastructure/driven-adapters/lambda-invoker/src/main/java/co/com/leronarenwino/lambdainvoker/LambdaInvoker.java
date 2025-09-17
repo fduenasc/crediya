@@ -40,7 +40,7 @@ public class LambdaInvoker implements CapacityCalculatorService {
     public Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
         log.info("Invoking Lambda function: {} for capacity calculation", properties.functionName());
 
-        return buildRequestPayload(loanApplication, userData, loanType, List.of(loanApplication))
+        return buildRequestPayload(loanApplication, userData, loanType, loanApplications)
                 .flatMap(payload -> Mono.fromFuture(() -> lambdaClient.invoke(InvokeRequest.builder()
                         .functionName(properties.functionName())
                         .payload(SdkBytes.fromUtf8String(payload))

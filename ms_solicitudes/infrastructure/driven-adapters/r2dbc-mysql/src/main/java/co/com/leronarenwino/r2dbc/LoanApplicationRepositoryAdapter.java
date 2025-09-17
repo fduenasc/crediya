@@ -13,10 +13,13 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper.toModel;
+
 @Repository
 public class LoanApplicationRepositoryAdapter implements LoanApplicationRepository {
 
     private static final String LOAN_TYPE_NOT_FOUND = "Loan type not found";
+    private static final String APPROVED_STATUS = "APROBADA";
 
     private static final Logger log = LoggerFactory.getLogger(LoanApplicationRepositoryAdapter.class);
 
@@ -62,6 +65,14 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                                 })
                 )
                 .then();
+    }
+
+    @Override
+    public Flux<LoanApplication> findAllApprovedLoansApplicationsByEmail(String email) {
+        return loanStatusR2DbcRepository.findByNombre(APPROVED_STATUS)
+                .flatMapMany(estado -> loanApplicationR2DbcRepository.findByIdEstadoAndEmail(estado.getIdEstado(), email)
+                        .map(entity -> toModel(entity, APPROVED_STATUS, estado.getNombre()))
+                );
     }
 
     @Override
@@ -121,7 +132,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 Mono.just(solicitudEntity),
                 getLoanTypeNameById(solicitudEntity.getIdTipoPrestamo()),
                 getLoanStatusNameById(solicitudEntity.getIdEstado())
-        ).map(tuple -> LoanApplicationMapper.toModel(tuple.getT1(), tuple.getT2(), tuple.getT3()));
+        ).map(tuple -> toModel(tuple.getT1(), tuple.getT2(), tuple.getT3()));
     }
 
     private Mono<String> getLoanTypeNameById(Long loanTypeId) {
