@@ -50,7 +50,7 @@ public class LambdaInvoker implements CapacityCalculatorService {
                 .doOnError(error -> log.error("Error invoking Lambda function: {}", error.getMessage()));
     }
 
-    private Mono<String> buildRequestPayload(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
+    protected Mono<String> buildRequestPayload(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
         return Mono.fromCallable(() -> {
             List<ActiveLoan> activeLoanDto = loanApplications.stream()
                     .map(loan -> new ActiveLoan(

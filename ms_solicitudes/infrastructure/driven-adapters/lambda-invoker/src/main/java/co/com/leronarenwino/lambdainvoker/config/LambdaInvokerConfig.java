@@ -19,7 +19,7 @@ public class LambdaInvokerConfig {
                 .build();
     }
 
-    private AwsCredentialsProviderChain getProviderChain() {
+    protected AwsCredentialsProviderChain getProviderChain() {
         return AwsCredentialsProviderChain.builder()
                 .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
