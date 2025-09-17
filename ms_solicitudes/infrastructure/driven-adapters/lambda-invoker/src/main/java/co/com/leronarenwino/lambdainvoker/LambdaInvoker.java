@@ -1,6 +1,7 @@
 package co.com.leronarenwino.lambdainvoker;
 
 import co.com.leronarenwino.lambdainvoker.config.LambdaInvokerProperties;
+import co.com.leronarenwino.lambdainvoker.dto.ActiveLoan;
 import co.com.leronarenwino.lambdainvoker.dto.LambdaRequest;
 import co.com.leronarenwino.lambdainvoker.dto.LambdaResponse;
 import co.com.leronarenwino.model.Capacity;
@@ -39,7 +40,7 @@ public class LambdaInvoker implements CapacityCalculatorService {
     public Mono<Capacity> calculateCapacity(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
         log.info("Invoking Lambda function: {} for capacity calculation", properties.functionName());
 
-        return buildRequestPayload(loanApplication, userData, loanType)
+        return buildRequestPayload(loanApplication, userData, loanType, List.of(loanApplication))
                 .flatMap(payload -> Mono.fromFuture(() -> lambdaClient.invoke(InvokeRequest.builder()
                         .functionName(properties.functionName())
                         .payload(SdkBytes.fromUtf8String(payload))
@@ -49,15 +50,24 @@ public class LambdaInvoker implements CapacityCalculatorService {
                 .doOnError(error -> log.error("Error invoking Lambda function: {}", error.getMessage()));
     }
 
-    private Mono<String> buildRequestPayload(LoanApplication loanApplication, UserData userData, LoanType loanType) {
+    private Mono<String> buildRequestPayload(LoanApplication loanApplication, UserData userData, LoanType loanType, List<LoanApplication> loanApplications) {
         return Mono.fromCallable(() -> {
+            List<ActiveLoan> activeLoanDto = loanApplications.stream()
+                    .map(loan -> new ActiveLoan(
+                            loan.loanAmount(),
+                            loan.termInMonths(),
+                            loanType.interestRate()
+                    ))
+                    .toList();
+
             LambdaRequest request = new LambdaRequest(
                     loanApplication.loanAmount(),
                     loanApplication.termInMonths(),
                     loanApplication.loanType(),
                     loanType.interestRate(),
                     userData.baseSalary(),
-                    userData.name()
+                    userData.name(),
+                    activeLoanDto
             );
 
             try {
