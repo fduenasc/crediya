@@ -127,7 +127,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 .doOnNext(calculoAutomatico -> log.info("Loan type '{}' has automatic calculation: {}", loanType, calculoAutomatico));
     }
 
-    private Mono<LoanApplication> mapToLoanApplication(SolicitudEntity solicitudEntity) {
+    protected Mono<LoanApplication> mapToLoanApplication(SolicitudEntity solicitudEntity) {
         return Mono.zip(
                 Mono.just(solicitudEntity),
                 getLoanTypeNameById(solicitudEntity.getIdTipoPrestamo()),
@@ -135,7 +135,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
         ).map(tuple -> toModel(tuple.getT1(), tuple.getT2(), tuple.getT3()));
     }
 
-    private Mono<String> getLoanTypeNameById(Long loanTypeId) {
+    protected Mono<String> getLoanTypeNameById(Long loanTypeId) {
         return loanTypeR2DbcRepository.findById(loanTypeId)
                 .map(TipoPrestamoEntity::getNombre)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException(LOAN_TYPE_NOT_FOUND)));
@@ -147,7 +147,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan status not found")));
     }
 
-    private Mono<Long> getLoanTypeIdByName(String loanTypeName) {
+    protected Mono<Long> getLoanTypeIdByName(String loanTypeName) {
         log.info("Obteniendo loanTypeId por loanTypeName: {}", loanTypeName);
         return loanTypeR2DbcRepository.findByNombre(loanTypeName)
                 .map(TipoPrestamoEntity::getIdTipoPrestamo)
@@ -155,7 +155,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
 
     }
 
-    private Mono<Long> getLoanStatusIdByName(String loanStatusName) {
+    protected Mono<Long> getLoanStatusIdByName(String loanStatusName) {
         log.info("Obteniendo loanStatusId por loanStatusName: {}", loanStatusName);
         return loanStatusR2DbcRepository.findByNombre(loanStatusName)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan status not found")))
