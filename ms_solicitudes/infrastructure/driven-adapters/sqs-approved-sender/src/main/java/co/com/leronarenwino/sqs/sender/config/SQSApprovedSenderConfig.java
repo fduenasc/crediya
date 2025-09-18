@@ -1,6 +1,7 @@
 package co.com.leronarenwino.sqs.sender.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
@@ -16,11 +17,12 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import java.net.URI;
 
 @Configuration
+@EnableConfigurationProperties(SQSApprovedSenderProperties.class)
 @ConditionalOnMissingBean(SqsAsyncClient.class)
-public class SQSSenderConfig {
+public class SQSApprovedSenderConfig {
 
     @Bean
-    public SqsAsyncClient configSqs(SQSSenderProperties properties) {
+    public SqsAsyncClient configSqsApproved(SQSApprovedSenderProperties properties) {
         return SqsAsyncClient.builder()
                 .endpointOverride(resolveEndpoint(properties))
                 .region(Region.of(properties.region()))
@@ -39,7 +41,7 @@ public class SQSSenderConfig {
                 .build();
     }
 
-    private URI resolveEndpoint(SQSSenderProperties properties) {
+    private URI resolveEndpoint(SQSApprovedSenderProperties properties) {
         if (properties.endpoint() != null) {
             return URI.create(properties.endpoint());
         }
