@@ -27,10 +27,10 @@ adapter:
     timeout: 5000
   sqs-notification:
     region: "${AWS_REGION:us-east-1}"
-    queueUrl: "${SQS_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/notifications}"
+    queueUrl: "${SQS_NOTIFICATION_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/notifications}"
   sqs-approved:
     region: "${AWS_REGION:us-east-1}"
-    queueUrl: "${SQS_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/approved}"
+    queueUrl: "${SQS_APPROVED_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/approved}"
   lambda:
     region: "${AWS_REGION:us-east-1}"
     function-name: "${LAMBDA_FUNCTION_NAME:capacity-calculator-func}"
