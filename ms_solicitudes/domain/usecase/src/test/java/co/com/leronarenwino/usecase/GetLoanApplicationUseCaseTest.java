@@ -5,6 +5,7 @@ import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -37,6 +38,23 @@ class GetLoanApplicationUseCaseTest {
         StepVerifier.create(useCase.getLoanApplicationById(123L))
                 .expectNext(app)
                 .verifyComplete();
+    }
+
+    @Test
+    void getAllLoanApplicationsReturnsFluxFromRepository() {
+        LoanApplicationRepository repository = mock(LoanApplicationRepository.class);
+        LoanApplication app1 = new LoanApplication(1000L, 12L, 123L, "mail@test.com", "Tipo", "Pendiente");
+        LoanApplication app2 = new LoanApplication(2000L, 24L, 456L, "otro@test.com", "Tipo2", "Aprobada");
+        when(repository.findAllPaginated(0, 2)).thenReturn(Flux.just(app1, app2));
+
+        GetLoanApplicationUseCase getLoanApplicationUseCase = new GetLoanApplicationUseCase(repository);
+
+        StepVerifier.create(getLoanApplicationUseCase.getAllLoanApplications(0, 2))
+                .expectNext(app1)
+                .expectNext(app2)
+                .verifyComplete();
+
+        verify(repository).findAllPaginated(0, 2);
     }
 
     @Test
