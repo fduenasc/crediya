@@ -2,6 +2,7 @@ package co.com.leronarenwino.api;
 
 import co.com.leronarenwino.api.dto.*;
 import co.com.leronarenwino.model.LoanApplication;
+import co.com.leronarenwino.model.UserData;
 import co.com.leronarenwino.usecase.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -63,6 +64,65 @@ class HandlerTest {
                 validator
         );
     }
+
+    @Test
+    void enrichWithUserDataErrorInGetDataFromValidatedUserTest() {
+        LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
+        String token = "validToken";
+
+        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", token))
+                .thenReturn(Mono.error(new RuntimeException("Error getting user data")));
+
+        StepVerifier.create(handler.enrichWithUserData(loanApplication, token))
+                .expectErrorMatches(error -> error instanceof RuntimeException &&
+                        error.getMessage().equals("Error getting user data"))
+                .verify();
+    }
+
+    @Test
+    void enrichWithUserDataErrorInGetLoanTypeTest() {
+        LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
+        String token = "validToken";
+        UserData userData = new UserData("Ned", "Stark", "nedstark@winterfell.got", 50000.0, null, "Winterfell", "Raven", "ADMIn");
+
+        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", token))
+                .thenReturn(Mono.just(userData));
+        when(getLoanTypeUseCase.getLoanTypeByName("Personal"))
+                .thenReturn(Mono.error(new RuntimeException("Error getting loan type")));
+
+        StepVerifier.create(handler.enrichWithUserData(loanApplication, token))
+                .expectErrorMatches(error -> error instanceof RuntimeException &&
+                        error.getMessage().equals("Error getting loan type"))
+                .verify();
+    }
+
+    @Test
+    void enrichWithUserDataWithNullTokenTest() {
+        LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
+
+        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", null))
+                .thenReturn(Mono.error(new IllegalArgumentException("Token cannot be null")));
+
+        StepVerifier.create(handler.enrichWithUserData(loanApplication, null))
+                .expectErrorMatches(error -> error instanceof IllegalArgumentException &&
+                        error.getMessage().equals("Token cannot be null"))
+                .verify();
+    }
+
+    @Test
+    void enrichWithUserDataWithEmptyEmailTest() {
+        LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "", "Personal", "Pendiente");
+        String token = "validToken";
+
+        when(validateUserUseCase.getDataFromValidatedUser("", token))
+                .thenReturn(Mono.error(new IllegalArgumentException("Email cannot be empty")));
+
+        StepVerifier.create(handler.enrichWithUserData(loanApplication, token))
+                .expectErrorMatches(error -> error instanceof IllegalArgumentException &&
+                        error.getMessage().equals("Email cannot be empty"))
+                .verify();
+    }
+
 
     @Test
     void extractPaginationAndFilterParams_withAllParametersTest() {

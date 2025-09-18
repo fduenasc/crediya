@@ -237,7 +237,7 @@ public class Handler {
                 .doOnSuccess(ignored -> log.info("Loan applications with user data retrieved successfully!"));
     }
 
-    private Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
+    protected Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
         return validateUserUseCase.getDataFromValidatedUser(loanApplication.email(), token)
                 .map(UserDataResponse::toUserDataResponse)
                 .flatMap(userData ->
@@ -616,7 +616,7 @@ public class Handler {
         return Mono.just(Long.valueOf(serverRequest.pathVariable(id)));
     }
 
-    private Mono<String> getAuthenticatedUsername() {
+    protected Mono<String> getAuthenticatedUsername() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .doOnNext(username -> log.info("Authenticated user: {}", username));
