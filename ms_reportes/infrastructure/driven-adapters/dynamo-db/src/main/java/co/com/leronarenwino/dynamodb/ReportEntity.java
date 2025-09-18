@@ -36,4 +36,9 @@ public class ReportEntity {
     public void setValor(Integer valor) {
         this.valor = valor;
     }
+
+    @Override
+    public String toString() {
+        return "ReportEntity{metrica=" + metrica + ", valor=" + valor +'}';
+    }
 }

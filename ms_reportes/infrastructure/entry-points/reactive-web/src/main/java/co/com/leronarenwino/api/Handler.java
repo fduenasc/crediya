@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
@@ -20,7 +19,7 @@ public class Handler {
         this.getTotalApprovedLoansUseCase = getTotalApprovedLoansUseCase;
     }
 
-    public Mono<ServerResponse> getTotalApprovedLoanApplications(ServerRequest serverRequest) {
+    public Mono<ServerResponse> getTotalApprovedLoanApplications() {
         log.info("Received request to get total approved loans");
         return getTotalApprovedLoansUseCase.getTotalApprovedLoans()
                 .flatMap(report -> {

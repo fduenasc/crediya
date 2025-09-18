@@ -16,6 +16,6 @@ public class RouterRest {
 
     @Bean
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(GET(REPORTS_URL), handler::getTotalApprovedLoanApplications);
+        return route(GET(REPORTS_URL), serverRequest -> handler.getTotalApprovedLoanApplications());
     }
 }
