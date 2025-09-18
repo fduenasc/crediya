@@ -14,7 +14,7 @@ class SQSNotificationSenderConfigTest {
     void shouldCreateSqsAsyncClientWithEndpoint() {
         SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
         SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1", "http://sqs:8080", "http://localhost:4566");
-        SqsAsyncClient client = config.configSqs(props);
+        SqsAsyncClient client = config.configSqsNotification(props);
 
         assertThat(client).isNotNull();
         assertThat(client.serviceClientConfiguration().endpointOverride())
@@ -25,7 +25,7 @@ class SQSNotificationSenderConfigTest {
     void shouldCreateSqsAsyncClientWithoutEndpoint() {
         SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
         SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1", "http://sqs:8080", null);
-        SqsAsyncClient client = config.configSqs(props);
+        SqsAsyncClient client = config.configSqsNotification(props);
 
         assertThat(client).isNotNull();
         assertThat(client.serviceClientConfiguration().endpointOverride()).isEmpty();

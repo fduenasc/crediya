@@ -16,7 +16,7 @@ import java.net.URI;
 public class SQSNotificationSenderConfig {
 
     @Bean
-    public SqsAsyncClient configSqs(SQSNotificationSenderProperties properties) {
+    public SqsAsyncClient configSqsNotification(SQSNotificationSenderProperties properties) {
         return SqsAsyncClient.builder()
                 .endpointOverride(resolveEndpoint(properties))
                 .region(Region.of(properties.region()))
