@@ -11,12 +11,12 @@ import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import java.net.URI;
 
 @Configuration
-@EnableConfigurationProperties(SQSSenderProperties.class)
+@EnableConfigurationProperties(SQSNotificationSenderProperties.class)
 @ConditionalOnMissingBean(SqsAsyncClient.class)
-public class SQSSenderConfig {
+public class SQSNotificationSenderConfig {
 
     @Bean
-    public SqsAsyncClient configSqs(SQSSenderProperties properties) {
+    public SqsAsyncClient configSqs(SQSNotificationSenderProperties properties) {
         return SqsAsyncClient.builder()
                 .endpointOverride(resolveEndpoint(properties))
                 .region(Region.of(properties.region()))
@@ -35,7 +35,7 @@ public class SQSSenderConfig {
                 .build();
     }
 
-    protected URI resolveEndpoint(SQSSenderProperties properties) {
+    protected URI resolveEndpoint(SQSNotificationSenderProperties properties) {
         if (properties.endpoint() != null) {
             return URI.create(properties.endpoint());
         }

@@ -1,7 +1,7 @@
 package co.com.leronarenwino.sqs.sender;
 
-import co.com.leronarenwino.model.gateway.SenderService;
-import co.com.leronarenwino.sqs.sender.config.SQSSenderProperties;
+import co.com.leronarenwino.model.gateway.NotificationSenderService;
+import co.com.leronarenwino.sqs.sender.config.SQSNotificationSenderProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,13 +11,13 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 @Service
-public class SQSSender implements SenderService {
-    private static final Logger log = LoggerFactory.getLogger(SQSSender.class);
+public class SQSNotificationSender implements NotificationSenderService {
+    private static final Logger log = LoggerFactory.getLogger(SQSNotificationSender.class);
 
-    private final SQSSenderProperties properties;
+    private final SQSNotificationSenderProperties properties;
     private final SqsAsyncClient client;
 
-    public SQSSender(SqsAsyncClient client, SQSSenderProperties properties) {
+    public SQSNotificationSender(SqsAsyncClient client, SQSNotificationSenderProperties properties) {
         this.client = client;
         this.properties = properties;
     }

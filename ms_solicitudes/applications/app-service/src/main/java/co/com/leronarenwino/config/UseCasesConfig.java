@@ -3,7 +3,7 @@ package co.com.leronarenwino.config;
 import co.com.leronarenwino.model.gateway.CapacityCalculatorService;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
 import co.com.leronarenwino.model.gateway.ClientValidatorService;
-import co.com.leronarenwino.model.gateway.SenderService;
+import co.com.leronarenwino.model.gateway.NotificationSenderService;
 import co.com.leronarenwino.usecase.*;
 import org.springframework.context.annotation.*;
 
@@ -33,8 +33,8 @@ public class UseCasesConfig {
     @Bean
     @Primary
     public SendNotificationUseCase sendNotificationUseCase(
-            SenderService senderService) {
-        return new SendNotificationUseCase(senderService);
+            NotificationSenderService notificationSenderService) {
+        return new SendNotificationUseCase(notificationSenderService);
     }
 
     @Bean

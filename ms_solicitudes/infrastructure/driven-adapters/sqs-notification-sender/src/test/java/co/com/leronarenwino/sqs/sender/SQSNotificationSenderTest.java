@@ -1,6 +1,6 @@
 package co.com.leronarenwino.sqs.sender;
 
-import co.com.leronarenwino.sqs.sender.config.SQSSenderProperties;
+import co.com.leronarenwino.sqs.sender.config.SQSNotificationSenderProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,16 +15,16 @@ import java.util.concurrent.CompletableFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class SQSSenderTest {
+class SQSNotificationSenderTest {
 
     private SqsAsyncClient client;
-    private SQSSender sender;
+    private SQSNotificationSender sender;
 
     @BeforeEach
     void setUp() {
         client = mock(SqsAsyncClient.class);
-        SQSSenderProperties properties = new SQSSenderProperties("us-east-1", "https://sqs-url", null);
-        sender = new SQSSender(client, properties);
+        SQSNotificationSenderProperties properties = new SQSNotificationSenderProperties("us-east-1", "https://sqs-url", null);
+        sender = new SQSNotificationSender(client, properties);
     }
 
     @Test

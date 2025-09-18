@@ -8,12 +8,12 @@ import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SQSSenderConfigTest {
+class SQSNotificationSenderConfigTest {
 
     @Test
     void shouldCreateSqsAsyncClientWithEndpoint() {
-        SQSSenderConfig config = new SQSSenderConfig();
-        SQSSenderProperties props = new SQSSenderProperties("us-east-1", "http://sqs:8080", "http://localhost:4566");
+        SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
+        SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1", "http://sqs:8080", "http://localhost:4566");
         SqsAsyncClient client = config.configSqs(props);
 
         assertThat(client).isNotNull();
@@ -23,8 +23,8 @@ class SQSSenderConfigTest {
 
     @Test
     void shouldCreateSqsAsyncClientWithoutEndpoint() {
-        SQSSenderConfig config = new SQSSenderConfig();
-        SQSSenderProperties props = new SQSSenderProperties("us-east-1", "http://sqs:8080", null);
+        SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
+        SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1", "http://sqs:8080", null);
         SqsAsyncClient client = config.configSqs(props);
 
         assertThat(client).isNotNull();
@@ -33,7 +33,7 @@ class SQSSenderConfigTest {
 
     @Test
     void shouldReturnProviderChain() {
-        SQSSenderConfig config = new SQSSenderConfig();
+        SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
         AwsCredentialsProviderChain chain = config.getProviderChain();
 
         assertThat(chain).isNotNull();
@@ -42,8 +42,8 @@ class SQSSenderConfigTest {
 
     @Test
     void shouldResolveEndpoint() {
-        SQSSenderConfig config = new SQSSenderConfig();
-        SQSSenderProperties props = new SQSSenderProperties("us-east-1","http://sqs:8080","http://localhost:4566");
+        SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
+        SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1","http://sqs:8080","http://localhost:4566");
         URI endpoint = config.resolveEndpoint(props);
 
         assertThat(endpoint).isEqualTo(URI.create("http://localhost:4566"));
@@ -51,8 +51,8 @@ class SQSSenderConfigTest {
 
     @Test
     void shouldReturnNullWhenEndpointIsNull() {
-        SQSSenderConfig config = new SQSSenderConfig();
-        SQSSenderProperties props = new SQSSenderProperties("us-east-1", null, null);
+        SQSNotificationSenderConfig config = new SQSNotificationSenderConfig();
+        SQSNotificationSenderProperties props = new SQSNotificationSenderProperties("us-east-1", null, null);
         URI endpoint = config.resolveEndpoint(props);
 
         assertThat(endpoint).isNull();
