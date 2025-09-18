@@ -1,6 +1,6 @@
 ##Spring Configuration
 server:
-  port: 8080
+  port: 8082
 spring:
   application:
     name: ms_reportes
@@ -11,4 +11,4 @@ spring:
       enabled: true
       path: /h2
   profiles:
-    include:
+    include: null
