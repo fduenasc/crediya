@@ -100,6 +100,8 @@ services:
       SPRING_R2DBC_URL: r2dbc:mysql://mysql-loan:3306/crediya_solicitudes_db?serverTimezone=UTC
       MS_AUTENTICACION_URL: http://ms-autenticacion:8080
       AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       SQS_QUEUE_URL: ${SQS_QUEUE_URL}
       LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}
     ports:
