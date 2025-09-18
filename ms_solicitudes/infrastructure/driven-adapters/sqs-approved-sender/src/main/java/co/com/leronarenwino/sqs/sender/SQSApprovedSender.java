@@ -26,7 +26,7 @@ public class SQSApprovedSender implements ApprovedSenderService {
                 .map(SendMessageResponse::messageId);
     }
 
-    private SendMessageRequest buildRequest(String message) {
+    protected SendMessageRequest buildRequest(String message) {
         return SendMessageRequest.builder()
                 .queueUrl(properties.queueUrl())
                 .messageBody(message)
