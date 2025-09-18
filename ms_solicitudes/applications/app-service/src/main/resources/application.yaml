@@ -25,9 +25,12 @@ adapter:
   restconsumer:
     url: "${MS_AUTENTICACION_URL:http://localhost:8080}"
     timeout: 5000
-  sqs:
+  sqs-notification:
     region: "${AWS_REGION:us-east-1}"
     queueUrl: "${SQS_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/notifications}"
+  sqs-approved:
+    region: "${AWS_REGION:us-east-1}"
+    queueUrl: "${SQS_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/approved}"
   lambda:
     region: "${AWS_REGION:us-east-1}"
     function-name: "${LAMBDA_FUNCTION_NAME:capacity-calculator-func}"
