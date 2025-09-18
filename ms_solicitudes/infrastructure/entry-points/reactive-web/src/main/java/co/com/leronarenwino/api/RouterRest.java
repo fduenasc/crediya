@@ -17,7 +17,6 @@ public class RouterRest {
 
     private static final String BASE_URL = "/api/v1";
     private static final String LOAN_APPLICATION_URL = BASE_URL + "/loan-application";
-    private static final String USER_URL = BASE_URL + "/user";
     private static final String LOAN_APPLICATION_ID_URL = LOAN_APPLICATION_URL + "/{id}";
 
     @Bean
@@ -35,12 +34,18 @@ public class RouterRest {
                     method = RequestMethod.POST,
                     beanClass = Handler.class,
                     beanMethod = "saveLoanApplication"
+            ),
+            @RouterOperation(
+                    path = "/api/v1/loan-application/{id}",
+                    produces = {MediaType.APPLICATION_JSON_VALUE},
+                    method = RequestMethod.PUT,
+                    beanClass = Handler.class,
+                    beanMethod = "updateLoanApplicationStatus"
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
         return route(POST(LOAN_APPLICATION_URL), handler::saveLoanApplication)
                 .andRoute(PUT(LOAN_APPLICATION_ID_URL), handler::updateLoanApplicationStatus)
-                .andRoute(GET(LOAN_APPLICATION_URL), handler::getAllLoanApplications)
-                .andRoute(GET(USER_URL), handler::getUserData);
+                .andRoute(GET(LOAN_APPLICATION_URL), handler::getAllLoanApplications);
     }
 }

@@ -282,21 +282,6 @@ public class Handler {
         return new PaginatedResponse<>(content, page, size, totalElements, totalPages, hasNext, hasPrevious);
     }
 
-    public Mono<ServerResponse> getUserData(ServerRequest request) {
-        log.info("Post /api/v1/user request received");
-        return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> securityContext.getAuthentication().getName())
-                .doOnNext(username -> log.info("Authenticated user to get data: {}", username))
-                .flatMap(email -> {
-                    String token = extractTokenFromRequest(request);
-                    return validateUserUseCase.getDataFromValidatedUser(email, token);
-                })
-                .flatMap(userData -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(GenericResponse.success(userData, "Datos de usuario obtenidos exitosamente")))
-                .doOnError(error -> log.error("Error al obtener datos de usuario: {}", error.getMessage()));
-    }
-
     private String extractTokenFromRequest(ServerRequest request) {
         String authHeader = request.headers().firstHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -339,7 +324,12 @@ public class Handler {
                                     value = """
                                             {
                                                 "message": "Loan application successfully registered",
-                                                "data": "null",
+                                                "data": {
+                                                        "loanStatus": "APROBADA",
+                                                        "maxLoanAmount": 195.44,
+                                                        "monthlyPayment": 0.92,
+                                                        "riskLevel": "BAJO"
+                                                },
                                                 "timestamp": "2025-08-30T18:12:26.42674090",
                                                 "status": 200
                                             }
@@ -465,6 +455,136 @@ public class Handler {
                 .doOnSuccess(ignored -> log.info("Loan application successfully registered!"));
     }
 
+    @Operation(
+            summary = "Update the status of a loan application",
+            description = "Endpoint to update the status of an existing loan application"
+    )
+    @RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "loanStatus": "APROBADO"
+                                            }
+                                            """
+                            )
+                    },
+                    schema = @Schema(implementation = UpdateLoanApplicationRequest.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Loan application status successfully updated",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = GenericResponse.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                                {
+                                                    "message": "Loan application loanStatus successfully updated",
+                                                    "data": null,
+                                                    "timestamp": "2025-09-12T09:07:48.819089300",
+                                                    "status": 200
+                                                }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Bad Request",
+                                                "status": 400,
+                                                "detail": "The loanStatus is required",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content(
+            )
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "The requested resource does not exist",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Not Found",
+                                                "status": 404,
+                                                "detail": "Not found",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "415",
+            description = "Unsupported Media Type",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Unsupported Media Type",
+                                                "status": 415,
+                                                "detail": "The content type is not supported",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Internal Server Error",
+                                                "status": 500,
+                                                "detail": "Internal server error",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
     public Mono<ServerResponse> updateLoanApplicationStatus(ServerRequest serverRequest) {
         log.info("Put /api/v1/loan-application/{id} request received");
         return getPathVariable(serverRequest, "id")
