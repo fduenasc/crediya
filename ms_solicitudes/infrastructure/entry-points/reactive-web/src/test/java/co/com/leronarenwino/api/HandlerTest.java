@@ -16,8 +16,10 @@ import reactor.test.StepVerifier;
 
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -57,6 +59,48 @@ class HandlerTest {
                 sendNotificationUseCase,
                 validator
         );
+    }
+
+    @Test
+    void extractPaginationAndFilterParams_withAllParametersTest() {
+        ServerRequest request = mock(ServerRequest.class);
+        when(request.queryParam("page")).thenReturn(Optional.of("2"));
+        when(request.queryParam("size")).thenReturn(Optional.of("20"));
+        when(request.queryParam("status")).thenReturn(Optional.of("Aprobado"));
+
+        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
+
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(20);
+        assertThat(result.status()).isEqualTo("Aprobado");
+    }
+
+    @Test
+    void extractPaginationAndFilterParams_withDefaultValuesTest() {
+        ServerRequest request = mock(ServerRequest.class);
+        when(request.queryParam("page")).thenReturn(Optional.empty());
+        when(request.queryParam("size")).thenReturn(Optional.empty());
+        when(request.queryParam("status")).thenReturn(Optional.empty());
+
+        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
+
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.status()).isNull();
+    }
+
+    @Test
+    void extractPaginationAndFilterParams_withPartialParametersTest() {
+        ServerRequest request = mock(ServerRequest.class);
+        when(request.queryParam("page")).thenReturn(Optional.of("5"));
+        when(request.queryParam("size")).thenReturn(Optional.empty());
+        when(request.queryParam("status")).thenReturn(Optional.of("Pendiente"));
+
+        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
+
+        assertThat(result.page()).isEqualTo(5);
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.status()).isEqualTo("Pendiente");
     }
 
     @Test

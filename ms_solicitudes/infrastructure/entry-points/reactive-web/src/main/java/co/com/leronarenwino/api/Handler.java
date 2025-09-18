@@ -260,7 +260,7 @@ public class Handler {
                         : Mono.error(new IllegalArgumentException("Invalid status")));
     }
 
-    private PaginationAndFilterParams extractPaginationAndFilterParams(ServerRequest serverRequest) {
+    protected PaginationAndFilterParams extractPaginationAndFilterParams(ServerRequest serverRequest) {
         int page = serverRequest.queryParam("page")
                 .map(Integer::parseInt)
                 .orElse(0);
@@ -282,7 +282,7 @@ public class Handler {
         return new PaginatedResponse<>(content, page, size, totalElements, totalPages, hasNext, hasPrevious);
     }
 
-    private String extractTokenFromRequest(ServerRequest request) {
+    protected String extractTokenFromRequest(ServerRequest request) {
         String authHeader = request.headers().firstHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);

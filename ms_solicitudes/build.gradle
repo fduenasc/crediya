@@ -21,7 +21,7 @@ sonar {
         property "sonar.modules", "${modules.join(',')}"
         property "sonar.projectVersion", "0.0.1"
         property "sonar.sources", "src,deployment,settings.gradle,main.gradle,build.gradle,${modules.collect { "${it}/build.gradle" }.join(',')}"
-        property "sonar.exclusions","**/MainApplication.java, **/Handler.java"
+        property "sonar.exclusions","**/MainApplication.java"
         property "sonar.tests", "src/test"
         property "sonar.java.binaries", "**/build/classes/java/main"
         property "sonar.junit.reportsPath", "**/build/test-results/test"
