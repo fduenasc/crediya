@@ -8,8 +8,11 @@ import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -88,6 +91,60 @@ class HandlerTest {
         assertThat(result.size()).isEqualTo(10);
         assertThat(result.status()).isNull();
     }
+
+    @Test
+    void extractTokenFromRequestSuccessTest() {
+        // Given
+        ServerRequest request = mock(ServerRequest.class);
+        ServerRequest.Headers mockHeaders = mock(ServerRequest.Headers.class);
+        when(request.headers()).thenReturn(mockHeaders);
+        when(mockHeaders.firstHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer validToken123");
+
+        // When
+        String token = handler.extractTokenFromRequest(request);
+
+        // Then
+        assertEquals("validToken123", token);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'',''",
+            "'','Token inválido'",
+            "'Basic invalidToken','Token con prefijo inválido'"
+    })
+    void extractTokenFromRequestInvalidTokenTest(String authHeader, String description) {
+        // Given
+        ServerRequest request = mock(ServerRequest.class);
+        ServerRequest.Headers mockHeaders = mock(ServerRequest.Headers.class);
+        when(request.headers()).thenReturn(mockHeaders);
+        when(mockHeaders.firstHeader(HttpHeaders.AUTHORIZATION))
+                .thenReturn(authHeader.isEmpty() ? null : authHeader);
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> handler.extractTokenFromRequest(request)
+        );
+        assertEquals("Token de autorización requerido", exception.getMessage());
+    }
+
+
+    @Test
+    void extractTokenFromRequestOnlyBearerTest() {
+        // Given
+        ServerRequest request = mock(ServerRequest.class);
+        ServerRequest.Headers mockHeaders = mock(ServerRequest.Headers.class);
+        when(request.headers()).thenReturn(mockHeaders);
+        when(mockHeaders.firstHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer ");
+
+        // When
+        String token = handler.extractTokenFromRequest(request);
+
+        // Then
+        assertEquals("", token);
+    }
+
 
     @Test
     void extractPaginationAndFilterParams_withPartialParametersTest() {
