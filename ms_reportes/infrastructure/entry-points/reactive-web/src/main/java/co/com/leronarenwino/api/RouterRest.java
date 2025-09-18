@@ -12,10 +12,10 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 public class RouterRest {
 
     private static final String BASE_PATH = "/api/v1";
-    private static final String REPORT_URL = BASE_PATH + "/reports";
+    private static final String REPORTS_URL = BASE_PATH + "/reports";
 
     @Bean
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(GET(REPORT_URL), handler::listenGETUseCase);
+        return route(GET(REPORTS_URL), handler::getTotalApprovedLoanApplications);
     }
 }
