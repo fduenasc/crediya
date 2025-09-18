@@ -41,6 +41,23 @@ services:
       retries: 10
       interval: 10s
 
+  # LocalStack para servicios AWS simulados
+  localstack:
+    container_name: localstack
+    image: localstack/localstack:stable
+    ports:
+      - "127.0.0.1:4566:4566" # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559" # external services port range
+    environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - SERVICES=s3,sqs,sns,lambda,logs,iam
+      - DEBUG=${DEBUG:-0}
+      - AWS_ACCESS_KEY_ID=test # default AWS credentials
+      - AWS_SECRET_ACCESS_KEY=test # default AWS credentials
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack" # LocalStack data volume
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
   # Microservicio de Autenticación
   ms-autenticacion:
     build:
@@ -82,6 +99,11 @@ services:
       JWT_USER_GENERATOR: ${JWT_USER_GENERATOR}
       SPRING_R2DBC_URL: r2dbc:mysql://mysql-loan:3306/crediya_solicitudes_db?serverTimezone=UTC
       MS_AUTENTICACION_URL: http://ms-autenticacion:8080
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL}
+      LAMBDA_FUNCTION_NAME: ${LAMBDA_FUNCTION_NAME}
     ports:
       - "8081:8081"
     depends_on:

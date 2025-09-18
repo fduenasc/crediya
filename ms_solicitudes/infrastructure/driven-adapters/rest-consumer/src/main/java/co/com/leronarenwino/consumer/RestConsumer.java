@@ -1,8 +1,8 @@
 package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.dto.GenericResponse;
-import co.com.leronarenwino.consumer.dto.UserResponse;
-import co.com.leronarenwino.model.gateway.RestConsumerService;
+import co.com.leronarenwino.model.UserData;
+import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 import static co.com.leronarenwino.consumer.TokenValidationRequest.create;
 
 @Component
-public class RestConsumer implements RestConsumerService {
+public class RestConsumer implements ClientValidatorService {
 
     private static final Logger log = LoggerFactory.getLogger(RestConsumer.class);
     private static final String VALIDATION_ENDPOINT = "/api/v1/validate";
@@ -44,14 +44,7 @@ public class RestConsumer implements RestConsumerService {
     }
 
     @Override
-    public Mono<String> validateToken(String token) {
-        return performTokenValidation(token)
-                .map(TokenValidationResponse::data)
-                .doOnSuccess(username -> log.info("Token validated successfully for user: {}", username))
-                .doOnError(error -> log.error("Token validation failed: {}", error.getMessage()));
-    }
-
-    public Mono<UserResponse> getUserData(String email, String token) {
+    public Mono<UserData> getDataFromValidatedUser(String email, String token) {
         log.info("Getting user data for email: {}", email);
         return webClient
                 .get()
@@ -62,8 +55,8 @@ public class RestConsumer implements RestConsumerService {
                         Mono.error(new IllegalArgumentException("Token is invalid or expired")))
                 .onStatus(HttpStatusCode::is5xxServerError, response ->
                         Mono.error(new IllegalArgumentException("Server error when getting user data")))
-                .bodyToMono(new ParameterizedTypeReference<GenericResponse<UserResponse>>() {})
-                .map(GenericResponse::toUserResponse)
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<UserData>>() {})
+                .map(GenericResponse::toUser)
                 .doOnSuccess(userData -> log.info("User data retrieved successfully: {}", userData))
                 .doOnError(error -> log.error("Error getting user data: {}", error.getMessage()));
     }

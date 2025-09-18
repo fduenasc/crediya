@@ -1,11 +1,8 @@
 package co.com.leronarenwino.api;
 
 import co.com.leronarenwino.api.dto.*;
-import co.com.leronarenwino.consumer.RestConsumer;
 import co.com.leronarenwino.model.LoanApplication;
-import co.com.leronarenwino.usecase.GetLoanApplicationUseCase;
-import co.com.leronarenwino.usecase.GetLoanTypeUseCase;
-import co.com.leronarenwino.usecase.SaveLoanApplicationUseCase;
+import co.com.leronarenwino.usecase.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,38 +23,49 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuples;
 
 import java.util.List;
 import java.util.Set;
 
 import static co.com.leronarenwino.api.dto.GenericResponse.success;
 import static co.com.leronarenwino.api.dto.LoanApplicationResponse.toLoanApplicationResponse;
+import static co.com.leronarenwino.api.dto.NotificationResponse.buildNotificationMessage;
 
 @Component
 @Tag(name = "Loan Applications", description = "Operations related to loan applications management")
 public class Handler {
 
+    private static final String BODY_CANNOT_BE_EMPTY = "The request body cannot be empty";
+
     private static final Logger log = LoggerFactory.getLogger(Handler.class);
 
     private final SaveLoanApplicationUseCase saveLoanApplicationUseCase;
+    private final UpdateLoanApplicationUseCase updateLoanApplicationUseCase;
     private final GetLoanApplicationUseCase getLoanApplicationUseCase;
-
     private final GetLoanTypeUseCase getLoanTypeUseCase;
-    private final RestConsumer restConsumer;
+    private final ValidateUserUseCase validateUserUseCase;
+
+    private final SendNotificationUseCase sendNotificationUseCase;
 
     private final Validator validator;
 
     public Handler(
             SaveLoanApplicationUseCase saveLoanApplicationUseCase,
+            UpdateLoanApplicationUseCase updateLoanApplicationUseCase,
             GetLoanApplicationUseCase getLoanApplicationUseCase,
             GetLoanTypeUseCase getLoanTypeUseCase,
-            RestConsumer restConsumer,
+            ValidateUserUseCase validateUserUseCase,
+            SendNotificationUseCase sendNotificationUseCase,
             Validator validator
     ) {
         this.saveLoanApplicationUseCase = saveLoanApplicationUseCase;
+        this.updateLoanApplicationUseCase = updateLoanApplicationUseCase;
         this.getLoanApplicationUseCase = getLoanApplicationUseCase;
         this.getLoanTypeUseCase = getLoanTypeUseCase;
-        this.restConsumer = restConsumer;
+        this.validateUserUseCase = validateUserUseCase;
+        this.sendNotificationUseCase = sendNotificationUseCase;
         this.validator = validator;
     }
 
@@ -207,9 +215,7 @@ public class Handler {
     )
     public Mono<ServerResponse> getAllLoanApplications(ServerRequest serverRequest) {
         log.info("Get /api/v1/loan-application request received");
-        return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> securityContext.getAuthentication().getName())
-                .doOnNext(username -> log.info("Authenticated user: {}", username))
+        return getAuthenticatedUsername()
                 .then(Mono.fromCallable(() -> extractPaginationAndFilterParams(serverRequest)))
                 .doOnNext(params -> log.info("Parameters - page: {}, size: {}, status: {}",
                         params.page(), params.size(), params.status()))
@@ -231,9 +237,9 @@ public class Handler {
                 .doOnSuccess(ignored -> log.info("Loan applications with user data retrieved successfully!"));
     }
 
-    private Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
-        return restConsumer.getUserData(loanApplication.email(), token)
-                .map(UserDataResponse::toUserData)
+    protected Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
+        return validateUserUseCase.getDataFromValidatedUser(loanApplication.email(), token)
+                .map(UserDataResponse::toUserDataResponse)
                 .flatMap(userData ->
                         getLoanTypeUseCase.getLoanTypeByName(loanApplication.loanType())
                                 .flatMap(loanType ->
@@ -243,7 +249,7 @@ public class Handler {
                 .doOnError(error -> log.error("Error enriching loan application with user data: {}", error.getMessage()));
     }
 
-    private Mono<PaginationAndFilterParams> validateStatusIfPresent(PaginationAndFilterParams params) {
+    protected Mono<PaginationAndFilterParams> validateStatusIfPresent(PaginationAndFilterParams params) {
         if (params.status() == null) {
             return Mono.just(params);
         }
@@ -254,7 +260,7 @@ public class Handler {
                         : Mono.error(new IllegalArgumentException("Invalid status")));
     }
 
-    private PaginationAndFilterParams extractPaginationAndFilterParams(ServerRequest serverRequest) {
+    protected PaginationAndFilterParams extractPaginationAndFilterParams(ServerRequest serverRequest) {
         int page = serverRequest.queryParam("page")
                 .map(Integer::parseInt)
                 .orElse(0);
@@ -276,22 +282,7 @@ public class Handler {
         return new PaginatedResponse<>(content, page, size, totalElements, totalPages, hasNext, hasPrevious);
     }
 
-    public Mono<ServerResponse> getUserData(ServerRequest request) {
-        log.info("Post /api/v1/user request received");
-        return ReactiveSecurityContextHolder.getContext()
-                .map(securityContext -> securityContext.getAuthentication().getName())
-                .doOnNext(username -> log.info("Authenticated user to get data: {}", username))
-                .flatMap(email -> {
-                    String token = extractTokenFromRequest(request);
-                    return restConsumer.getUserData(email, token);
-                })
-                .flatMap(userData -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(GenericResponse.success(userData, "Datos de usuario obtenidos exitosamente")))
-                .doOnError(error -> log.error("Error al obtener datos de usuario: {}", error.getMessage()));
-    }
-
-    private String extractTokenFromRequest(ServerRequest request) {
+    protected String extractTokenFromRequest(ServerRequest request) {
         String authHeader = request.headers().firstHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
@@ -333,7 +324,12 @@ public class Handler {
                                     value = """
                                             {
                                                 "message": "Loan application successfully registered",
-                                                "data": "null",
+                                                "data": {
+                                                        "loanStatus": "APROBADA",
+                                                        "maxLoanAmount": 195.44,
+                                                        "monthlyPayment": 0.92,
+                                                        "riskLevel": "BAJO"
+                                                },
                                                 "timestamp": "2025-08-30T18:12:26.42674090",
                                                 "status": 200
                                             }
@@ -438,7 +434,7 @@ public class Handler {
                 .map(securityContext -> securityContext.getAuthentication().getName())
                 .doOnNext(username -> log.info("Usuario autenticado: {}", username))
                 .zipWith(serverRequest.bodyToMono(LoanApplicationRequest.class)
-                        .switchIfEmpty(Mono.error(new IllegalArgumentException("The request body cannot be empty")))
+                        .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
                         .flatMap(this::validateLoanApplicationRequest))
                 .flatMap(tuple -> {
                     String username = tuple.getT1();
@@ -446,15 +442,184 @@ public class Handler {
                     if (!username.equalsIgnoreCase(request.email())) {
                         return Mono.error(new IllegalArgumentException("User email does not match authenticated user"));
                     }
-                    return Mono.just(request);
+                    return Mono.just(Tuples.of(username, request));
                 })
-                .doOnNext(loanApplication -> log.info("Loan application payload: {}", loanApplication))
-                .map(LoanApplicationRequest::toDomain)
-                .flatMap(saveLoanApplicationUseCase::saveLoanApplication)
-                .then(Mono.defer(() -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(success(null, "Loan application successfully registered"))))
+                .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
+                .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
+                        .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData))
+                        .doOnSuccess(capacity -> log.info("Loan application saved successfully with capacity: {}", capacity))
+                        .flatMap(capacity -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(success(capacity, "Loan application successfully registered")))
+                )
                 .doOnSuccess(ignored -> log.info("Loan application successfully registered!"));
+    }
+
+    @Operation(
+            summary = "Update the status of a loan application",
+            description = "Endpoint to update the status of an existing loan application"
+    )
+    @RequestBody(
+            required = true,
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "loanStatus": "APROBADO"
+                                            }
+                                            """
+                            )
+                    },
+                    schema = @Schema(implementation = UpdateLoanApplicationRequest.class)
+            )
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Loan application status successfully updated",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = GenericResponse.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                                {
+                                                    "message": "Loan application loanStatus successfully updated",
+                                                    "data": null,
+                                                    "timestamp": "2025-09-12T09:07:48.819089300",
+                                                    "status": 200
+                                                }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Bad Request",
+                                                "status": 400,
+                                                "detail": "The loanStatus is required",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = @Content(
+            )
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "The requested resource does not exist",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Not Found",
+                                                "status": 404,
+                                                "detail": "Not found",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "415",
+            description = "Unsupported Media Type",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Unsupported Media Type",
+                                                "status": 415,
+                                                "detail": "The content type is not supported",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    examples = {
+                            @ExampleObject(
+                                    value = """
+                                            {
+                                                "type": "about:blank",
+                                                "title": "Internal Server Error",
+                                                "status": 500,
+                                                "detail": "Internal server error",
+                                                "instance": "/api/v1/loan-application/{id}"
+                                            }
+                                            """
+                            )
+                    }
+            )
+    )
+    public Mono<ServerResponse> updateLoanApplicationStatus(ServerRequest serverRequest) {
+        log.info("Put /api/v1/loan-application/{id} request received");
+        return getPathVariable(serverRequest, "id")
+                .flatMap(id ->
+                        serverRequest.bodyToMono(UpdateLoanApplicationRequest.class)
+                                .switchIfEmpty(Mono.error(new IllegalArgumentException(BODY_CANNOT_BE_EMPTY)))
+                                .flatMap(this::validateUpdateLoanApplicationRequest)
+                                .doOnNext(request -> log.info("Update payload for loan application {}: {}", id, request))
+                                .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus())
+                                        .then(getLoanApplicationUseCase.getLoanApplicationById(id))
+                                        .map(NotificationResponse::toNotificationResponse))
+                                .flatMap(notificationResponse ->
+                                        buildNotificationMessage(notificationResponse)
+                                                .flatMap(notificationMessage ->
+                                                        sendNotificationUseCase.send(notificationMessage)
+                                                                .publishOn(Schedulers.boundedElastic())
+                                                                .doOnSuccess(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId))
+                                                                .doOnError(error -> log.error("Error sending notification to SQS: {}", error.getMessage()))
+                                                                .onErrorResume(error -> Mono.empty())
+                                                )
+                                )
+                                .then(ServerResponse.ok()
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .bodyValue(success(null, "Loan application loanStatus successfully updated")))
+                                .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
+    }
+
+    public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {
+        return Mono.just(Long.valueOf(serverRequest.pathVariable(id)));
+    }
+
+    protected Mono<String> getAuthenticatedUsername() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> securityContext.getAuthentication().getName())
+                .doOnNext(username -> log.info("Authenticated user: {}", username));
     }
 
     Mono<LoanApplicationRequest> validateLoanApplicationRequest(LoanApplicationRequest loanApplicationRequest) {
@@ -464,6 +629,15 @@ public class Handler {
             return Mono.error(new IllegalArgumentException(message));
         }
         return Mono.just(loanApplicationRequest);
+    }
+
+    Mono<UpdateLoanApplicationRequest> validateUpdateLoanApplicationRequest(UpdateLoanApplicationRequest updateLoanApplicationRequest) {
+        Set<ConstraintViolation<UpdateLoanApplicationRequest>> violations = validator.validate(updateLoanApplicationRequest);
+        if (!violations.isEmpty()) {
+            String message = violations.iterator().next().getMessage();
+            return Mono.error(new IllegalArgumentException(message));
+        }
+        return Mono.just(updateLoanApplicationRequest);
     }
 
 }

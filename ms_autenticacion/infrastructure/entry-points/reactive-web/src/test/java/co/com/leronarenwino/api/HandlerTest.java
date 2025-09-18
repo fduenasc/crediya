@@ -4,8 +4,10 @@ import co.com.leronarenwino.api.dto.LoginRequest;
 import co.com.leronarenwino.api.dto.UserRequest;
 import co.com.leronarenwino.model.Auth;
 import co.com.leronarenwino.model.User;
+import co.com.leronarenwino.usecase.GetUserUseCase;
 import co.com.leronarenwino.usecase.LoginUseCase;
 import co.com.leronarenwino.usecase.SaveUserUseCase;
+import co.com.leronarenwino.usecase.ValidateTokenUseCase;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
@@ -28,10 +30,16 @@ import static org.mockito.Mockito.*;
 class HandlerTest {
 
     @Mock
+    private GetUserUseCase getUserUseCase;
+
+    @Mock
     private SaveUserUseCase saveUserUseCase;
 
     @Mock
     private LoginUseCase loginUseCase;
+
+    @Mock
+    private ValidateTokenUseCase validateTokenUseCase;
 
     @Mock
     private Validator validator;
@@ -52,7 +60,7 @@ class HandlerTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        handler = new Handler(saveUserUseCase, loginUseCase, validator);
+        handler = new Handler(getUserUseCase, saveUserUseCase, loginUseCase, validateTokenUseCase, validator);
     }
 
     @AfterEach

@@ -1,4 +1,4 @@
-package co.com.leronarenwino.api.config;
+package co.com.leronarenwino.consumer.config;
 
 import co.com.leronarenwino.consumer.RestConsumer;
 import org.junit.jupiter.api.AfterEach;

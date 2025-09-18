@@ -334,3 +334,12 @@ gradle-app.setting
 # -----
 *.hprof
 build-cache
+
+# LocalStack data volume
+volume/
+
+# VSCode settings
+.vscode/
+
+# Local environment variables file
+.env

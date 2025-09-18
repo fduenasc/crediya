@@ -9,12 +9,15 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
-import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
-import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
+import static org.springframework.web.reactive.function.server.RequestPredicates.*;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 @Configuration
 public class RouterRest {
+
+    private static final String BASE_URL = "/api/v1";
+    private static final String LOAN_APPLICATION_URL = BASE_URL + "/loan-application";
+    private static final String LOAN_APPLICATION_ID_URL = LOAN_APPLICATION_URL + "/{id}";
 
     @Bean
     @RouterOperations({
@@ -31,11 +34,18 @@ public class RouterRest {
                     method = RequestMethod.POST,
                     beanClass = Handler.class,
                     beanMethod = "saveLoanApplication"
+            ),
+            @RouterOperation(
+                    path = "/api/v1/loan-application/{id}",
+                    produces = {MediaType.APPLICATION_JSON_VALUE},
+                    method = RequestMethod.PUT,
+                    beanClass = Handler.class,
+                    beanMethod = "updateLoanApplicationStatus"
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(POST("/api/v1/loan-application"), handler::saveLoanApplication)
-                .andRoute(GET("/api/v1/loan-application"), handler::getAllLoanApplications)
-                .andRoute(GET("/api/v1/user"), handler::getUserData);
+        return route(POST(LOAN_APPLICATION_URL), handler::saveLoanApplication)
+                .andRoute(PUT(LOAN_APPLICATION_ID_URL), handler::updateLoanApplicationStatus)
+                .andRoute(GET(LOAN_APPLICATION_URL), handler::getAllLoanApplications);
     }
 }

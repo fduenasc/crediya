@@ -3,19 +3,19 @@ server:
   port: 8081
 spring:
   application:
-    name: ms_solicitudes
+    name: "ms_solicitudes"
   devtools:
     add-properties: false
   h2:
     console:
       enabled: true
-      path: /h2
+      path: "/h2"
   profiles:
     include: null
   r2dbc:
-    url: ${SPRING_R2DBC_URL:r2dbc:mysql://localhost:3307/crediya_solicitudes_db?&serverTimezone=UTC}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: "${SPRING_R2DBC_URL:r2dbc:mysql://localhost:3307/crediya_solicitudes_db?&serverTimezone=UTC}"
+    username: "${DB_USERNAME}"
+    password: "${DB_PASSWORD}"
 
 # Configuración personalizada
 security:
@@ -23,5 +23,11 @@ security:
     protected-password: "[PROTECTED]"
 adapter:
   restconsumer:
-    url: ${MS_AUTENTICACION_URL:http://localhost:8080}
+    url: "${MS_AUTENTICACION_URL:http://localhost:8080}"
     timeout: 5000
+  sqs:
+    region: "${AWS_REGION:us-east-1}"
+    queueUrl: "${SQS_QUEUE_URL:https://sqs.us-east-1.amazonaws.com/646523381259/notifications}"
+  lambda:
+    region: "${AWS_REGION:us-east-1}"
+    function-name: "${LAMBDA_FUNCTION_NAME:capacity-calculator-func}"

@@ -2,15 +2,14 @@ package co.com.leronarenwino.usecase;
 
 import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class GetLoanApplicationUseCaseTest {
 
@@ -18,7 +17,6 @@ class GetLoanApplicationUseCaseTest {
     private LoanApplicationRepository loanApplicationRepository;
 
     private GetLoanApplicationUseCase useCase;
-
     private AutoCloseable closeable;
 
     @BeforeEach
@@ -33,86 +31,101 @@ class GetLoanApplicationUseCaseTest {
     }
 
     @Test
-    void getAllLoanApplicationsSuccessTest() {
-        LoanApplication app1 = new LoanApplication(1000L, 12L, 123456789L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
-        LoanApplication app2 = new LoanApplication(2000L, 24L, 987654321L, "nedstark@winterfell.wo", "HIPOTECARIO", "APROBADA");
+    void getLoanApplicationByIdSuccessTest() {
+        LoanApplication app = new LoanApplication(1000L, 12L, 123L, "test@correo.com", "PERSONAL", "PENDIENTE");
+        when(loanApplicationRepository.getLoanApplicationById(123L)).thenReturn(Mono.just(app));
 
-        when(loanApplicationRepository.findAllPaginated(0, 10))
-                .thenReturn(Flux.just(app1, app2));
-
-        StepVerifier.create(useCase.getAllLoanApplications(0, 10))
-                .expectNext(app1)
-                .expectNext(app2)
-                .verifyComplete();
-    }
-
-    @Test
-    void getAllLoanApplicationsEmptyResultTest() {
-        when(loanApplicationRepository.findAllPaginated(0, 10))
-                .thenReturn(Flux.empty());
-
-        StepVerifier.create(useCase.getAllLoanApplications(0, 10))
-                .verifyComplete();
-    }
-
-    @Test
-    void getAllLoanApplicationsWithDifferentPaginationTest() {
-        LoanApplication app = new LoanApplication(5000L, 36L, 111222333L, "nedstark@winterfell.wo", "VEHICULAR", "RECHAZADA");
-
-        when(loanApplicationRepository.findAllPaginated(1, 5))
-                .thenReturn(Flux.just(app));
-
-        StepVerifier.create(useCase.getAllLoanApplications(1, 5))
+        StepVerifier.create(useCase.getLoanApplicationById(123L))
                 .expectNext(app)
                 .verifyComplete();
     }
 
     @Test
-    void getAllLoanApplicationsRepositoryErrorTest() {
-        when(loanApplicationRepository.findAllPaginated(0, 10))
-                .thenReturn(Flux.error(new RuntimeException("Database error")));
+    void getAllLoanApplicationsReturnsFluxFromRepository() {
+        LoanApplicationRepository repository = mock(LoanApplicationRepository.class);
+        LoanApplication app1 = new LoanApplication(1000L, 12L, 123L, "mail@test.com", "Tipo", "Pendiente");
+        LoanApplication app2 = new LoanApplication(2000L, 24L, 456L, "otro@test.com", "Tipo2", "Aprobada");
+        when(repository.findAllPaginated(0, 2)).thenReturn(Flux.just(app1, app2));
 
-        StepVerifier.create(useCase.getAllLoanApplications(0, 10))
-                .expectErrorMatches(throwable ->
-                        throwable instanceof RuntimeException &&
-                                throwable.getMessage().equals("Database error"))
+        GetLoanApplicationUseCase getLoanApplicationUseCase = new GetLoanApplicationUseCase(repository);
+
+        StepVerifier.create(getLoanApplicationUseCase.getAllLoanApplications(0, 2))
+                .expectNext(app1)
+                .expectNext(app2)
+                .verifyComplete();
+
+        verify(repository).findAllPaginated(0, 2);
+    }
+
+    @Test
+    void getLoanApplicationByIdErrorTest() {
+        when(loanApplicationRepository.getLoanApplicationById(999L)).thenReturn(Mono.error(new RuntimeException("Not found")));
+
+        StepVerifier.create(useCase.getLoanApplicationById(999L))
+                .expectErrorMatches(e -> e instanceof RuntimeException && e.getMessage().equals("Not found"))
                 .verify();
     }
 
     @Test
-    void getAllLoanApplicationsWithLargePaginationTest() {
-        when(loanApplicationRepository.findAllPaginated(100, 1000))
-                .thenReturn(Flux.empty());
+    void countLoanApplicationsSuccessTest() {
+        when(loanApplicationRepository.count()).thenReturn(Mono.just(5L));
 
-        StepVerifier.create(useCase.getAllLoanApplications(100, 1000))
+        StepVerifier.create(useCase.countLoanApplications())
+                .expectNext(5L)
                 .verifyComplete();
     }
 
     @Test
-    void getAllLoanApplicationsWithEdgeCasePaginationTest() {
-        LoanApplication app = new LoanApplication(100L, 12L, 555666777L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
+    void countLoanApplicationsErrorTest() {
+        when(loanApplicationRepository.count()).thenReturn(Mono.error(new RuntimeException("DB error")));
 
-        when(loanApplicationRepository.findAllPaginated(0, 1))
-                .thenReturn(Flux.just(app));
+        StepVerifier.create(useCase.countLoanApplications())
+                .expectErrorMatches(e -> e instanceof RuntimeException && e.getMessage().equals("DB error"))
+                .verify();
+    }
 
-        StepVerifier.create(useCase.getAllLoanApplications(0, 1))
-                .expectNext(app)
+    @Test
+    void countLoanApplicationsByStatusSuccessTest() {
+        when(loanApplicationRepository.countByStatus("PENDIENTE")).thenReturn(Mono.just(2L));
+
+        StepVerifier.create(useCase.countLoanApplicationsByStatus("PENDIENTE"))
+                .expectNext(2L)
                 .verifyComplete();
     }
 
     @Test
-    void getAllLoanApplicationsMultiplePagesTest() {
-        LoanApplication app1 = new LoanApplication(1500L, 18L, 444555666L, "nedstark@winterfell.wo", "PERSONAL", "PENDIENTE");
-        LoanApplication app2 = new LoanApplication(3000L, 30L, 777888999L, "nedstark@winterfell.wo", "HIPOTECARIO", "APROBADA");
-        LoanApplication app3 = new LoanApplication(800L, 12L, 111333555L, "nedstark@winterfell.wo", "VEHICULAR", "RECHAZADA");
+    void countLoanApplicationsByStatusErrorTest() {
+        when(loanApplicationRepository.countByStatus("APROBADA")).thenReturn(Mono.error(new RuntimeException("Status error")));
 
-        when(loanApplicationRepository.findAllPaginated(2, 2))
-                .thenReturn(Flux.just(app1, app2, app3));
+        StepVerifier.create(useCase.countLoanApplicationsByStatus("APROBADA"))
+                .expectErrorMatches(e -> e instanceof RuntimeException && e.getMessage().equals("Status error"))
+                .verify();
+    }
 
-        StepVerifier.create(useCase.getAllLoanApplications(2, 2))
-                .expectNext(app1)
-                .expectNext(app2)
-                .expectNext(app3)
+    @Test
+    void existsByStatusTrueTest() {
+        when(loanApplicationRepository.existsByStatus("PENDIENTE")).thenReturn(Mono.just(true));
+
+        StepVerifier.create(useCase.existsByStatus("PENDIENTE"))
+                .expectNext(true)
                 .verifyComplete();
+    }
+
+    @Test
+    void existsByStatusFalseTest() {
+        when(loanApplicationRepository.existsByStatus("RECHAZADA")).thenReturn(Mono.just(false));
+
+        StepVerifier.create(useCase.existsByStatus("RECHAZADA"))
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    void existsByStatusErrorTest() {
+        when(loanApplicationRepository.existsByStatus("ERROR")).thenReturn(Mono.error(new RuntimeException("Status not found")));
+
+        StepVerifier.create(useCase.existsByStatus("ERROR"))
+                .expectErrorMatches(e -> e instanceof RuntimeException && e.getMessage().equals("Status not found"))
+                .verify();
     }
 }

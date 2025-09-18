@@ -3,20 +3,23 @@ package co.com.leronarenwino.r2dbc;
 import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.model.LoanType;
 import co.com.leronarenwino.model.gateway.LoanApplicationRepository;
-import co.com.leronarenwino.r2dbc.entity.SolicitudEntity;
-import co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper;
 import co.com.leronarenwino.r2dbc.entity.EstadoEntity;
+import co.com.leronarenwino.r2dbc.entity.SolicitudEntity;
 import co.com.leronarenwino.r2dbc.entity.TipoPrestamoEntity;
+import co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import static co.com.leronarenwino.r2dbc.mapper.LoanApplicationMapper.toModel;
+
 @Repository
 public class LoanApplicationRepositoryAdapter implements LoanApplicationRepository {
 
     private static final String LOAN_TYPE_NOT_FOUND = "Loan type not found";
+    private static final String APPROVED_STATUS = "APROBADA";
 
     private static final Logger log = LoggerFactory.getLogger(LoanApplicationRepositoryAdapter.class);
 
@@ -33,13 +36,43 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
     }
 
     @Override
-    public Mono<Void> save(LoanApplication loanApplication) {
+    public Mono<LoanApplication> getLoanApplicationById(Long id) {
+        return loanApplicationR2DbcRepository.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan application not found")))
+                .flatMap(this::mapToLoanApplication)
+                .doOnNext(loanApplication -> log.info("Found loan application: {}", loanApplication));
+    }
+
+    @Override
+    public Mono<Void> saveLoanApplication(LoanApplication loanApplication) {
         log.info("Guardando solicitud: {}", loanApplication);
         return getLoanTypeIdByName(loanApplication.loanType())
                 .flatMap(loanTypeId -> getLoanStatusIdByName(loanApplication.loanStatus())
                         .map(loanStatusId -> LoanApplicationMapper.toEntity(loanApplication, loanTypeId, loanStatusId)))
                 .flatMap(loanApplicationR2DbcRepository::save)
                 .then();
+    }
+
+    @Override
+    public Mono<Void> updateLoanApplication(Long id, String status) {
+        return loanApplicationR2DbcRepository.findById(id)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan application not found")))
+                .flatMap(existingLoanApplication ->
+                        getLoanStatusIdByName(status)
+                                .flatMap(loanStatusId -> {
+                                    existingLoanApplication.setIdEstado(loanStatusId);
+                                    return loanApplicationR2DbcRepository.save(existingLoanApplication);
+                                })
+                )
+                .then();
+    }
+
+    @Override
+    public Flux<LoanApplication> findAllApprovedLoansApplicationsByEmail(String email) {
+        return loanStatusR2DbcRepository.findByNombre(APPROVED_STATUS)
+                .flatMapMany(estado -> loanApplicationR2DbcRepository.findByIdEstadoAndEmail(estado.getIdEstado(), email)
+                        .map(entity -> toModel(entity, APPROVED_STATUS, estado.getNombre()))
+                );
     }
 
     @Override
@@ -86,15 +119,23 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 .doOnNext(exists -> log.info("Status '{}' exists: {}", status, exists));
     }
 
-    private Mono<LoanApplication> mapToLoanApplication(SolicitudEntity solicitudEntity) {
+    @Override
+    public Mono<Boolean> isValidateAutomaticEnableToLoanType(String loanType) {
+        return loanTypeR2DbcRepository.findByNombre(loanType)
+                .map(TipoPrestamoEntity::getValidacionAutomatica)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException(LOAN_TYPE_NOT_FOUND)))
+                .doOnNext(calculoAutomatico -> log.info("Loan type '{}' has automatic calculation: {}", loanType, calculoAutomatico));
+    }
+
+    protected Mono<LoanApplication> mapToLoanApplication(SolicitudEntity solicitudEntity) {
         return Mono.zip(
                 Mono.just(solicitudEntity),
                 getLoanTypeNameById(solicitudEntity.getIdTipoPrestamo()),
                 getLoanStatusNameById(solicitudEntity.getIdEstado())
-        ).map(tuple -> LoanApplicationMapper.toModel(tuple.getT1(), tuple.getT2(), tuple.getT3()));
+        ).map(tuple -> toModel(tuple.getT1(), tuple.getT2(), tuple.getT3()));
     }
 
-    private Mono<String> getLoanTypeNameById(Long loanTypeId) {
+    protected Mono<String> getLoanTypeNameById(Long loanTypeId) {
         return loanTypeR2DbcRepository.findById(loanTypeId)
                 .map(TipoPrestamoEntity::getNombre)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException(LOAN_TYPE_NOT_FOUND)));
@@ -106,7 +147,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan status not found")));
     }
 
-    private Mono<Long> getLoanTypeIdByName(String loanTypeName) {
+    protected Mono<Long> getLoanTypeIdByName(String loanTypeName) {
         log.info("Obteniendo loanTypeId por loanTypeName: {}", loanTypeName);
         return loanTypeR2DbcRepository.findByNombre(loanTypeName)
                 .map(TipoPrestamoEntity::getIdTipoPrestamo)
@@ -114,7 +155,7 @@ public class LoanApplicationRepositoryAdapter implements LoanApplicationReposito
 
     }
 
-    private Mono<Long> getLoanStatusIdByName(String loanStatusName) {
+    protected Mono<Long> getLoanStatusIdByName(String loanStatusName) {
         log.info("Obteniendo loanStatusId por loanStatusName: {}", loanStatusName);
         return loanStatusR2DbcRepository.findByNombre(loanStatusName)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("Loan status not found")))

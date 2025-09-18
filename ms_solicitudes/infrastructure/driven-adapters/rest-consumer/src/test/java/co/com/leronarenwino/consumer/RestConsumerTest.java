@@ -2,6 +2,8 @@ package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.config.RestConsumerConfig;
 import co.com.leronarenwino.consumer.config.RestConsumerProperties;
+import co.com.leronarenwino.consumer.dto.GenericResponse;
+import co.com.leronarenwino.model.UserData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.MockResponse;
@@ -46,22 +48,78 @@ class RestConsumerTest {
     }
 
     @Test
-    void validateTokenSuccessfulTest() throws JsonProcessingException {
-        TokenValidationResponse response = new TokenValidationResponse(
-                "Token valid",
-                "testUser",
-                "2024-01-01T10:00:00",
-                200
-        );
+    void getDataFromValidatedUserSuccessTest() throws JsonProcessingException {
+        UserData userData = new UserData("Ned", "Stark", "nedstark@winterfell.got", 1234.56, null, "Winterfell", "1234567890", "ADMIN");
+        GenericResponse<UserData> response = new GenericResponse<>("OK", userData, "2025-01-01T10:00:00", 200);
 
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 200 OK")
                 .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .setBody(objectMapper.writeValueAsString(response)));
 
-        StepVerifier.create(restConsumer.validateToken("validToken"))
-                .expectNext("testUser")
+        StepVerifier.create(restConsumer.getDataFromValidatedUser("nedstark@winterfell.got", "token"))
+                .assertNext(retrievedUserData -> {
+                    assert retrievedUserData.name().equals("Ned");
+                    assert retrievedUserData.lastname().equals("Stark");
+                    assert retrievedUserData.email().equals("nedstark@winterfell.got");
+                })
                 .verifyComplete();
+    }
+
+    @Test
+    void getDataFromValidatedUser4xxTest() {
+        mockWebServer.enqueue(new MockResponse()
+                .setStatus("HTTP/1.1 401 Unauthorized"));
+
+        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
+                        e.getMessage().contains("Token is invalid or expired"))
+                .verify();
+    }
+
+    @Test
+    void getDataFromValidatedUser5xxTest() {
+        mockWebServer.enqueue(new MockResponse()
+                .setStatus("HTTP/1.1 500 Internal Server Error"));
+
+        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
+                        e.getMessage().contains("Server error when getting user data"))
+                .verify();
+    }
+
+    @Test
+    void getDataFromValidatedUserInvalidBodyTest() {
+        mockWebServer.enqueue(new MockResponse()
+                .setStatus("HTTP/1.1 200 OK")
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .setBody("{}")); // cuerpo inválido
+
+        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+                .expectError()
+                .verify();
+    }
+
+
+    @Test
+    void validateTokenSuccessfulTest() {
+        String userDetailsJson = """
+                {
+                  "username": "testUser",
+                  "token": "validToken",
+                  "expiresAt": "2024-01-01T10:00:00"
+                }
+                """;
+
+        mockWebServer.enqueue(new MockResponse()
+                .setStatus("HTTP/1.1 200 OK")
+                .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .setBody(userDetailsJson));
+
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("token_invalido"))
+                .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
+                        e.getMessage().contains("Invalid or expired token"))
+                .verify();
     }
 
     @Test
@@ -78,7 +136,7 @@ class RestConsumerTest {
                 .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .setBody(objectMapper.writeValueAsString(response)));
 
-        StepVerifier.create(restConsumer.validateToken("invalidToken"))
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("invalidToken"))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
@@ -88,7 +146,7 @@ class RestConsumerTest {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 401 Unauthorized"));
 
-        StepVerifier.create(restConsumer.validateToken("invalidToken"))
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("invalidToken"))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
@@ -145,7 +203,7 @@ class RestConsumerTest {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 408 Request Timeout"));
 
-        StepVerifier.create(restConsumer.validateToken("token"))
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("token"))
                 .expectError(IllegalArgumentException.class)
                 .verify(Duration.ofSeconds(10));
     }
@@ -161,7 +219,7 @@ class RestConsumerTest {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 500 Internal Server Error"));
 
-        StepVerifier.create(restConsumer.validateToken("token"))
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("token"))
                 .expectError(IllegalArgumentException.class)
                 .verify(Duration.ofSeconds(10));
     }
@@ -171,7 +229,7 @@ class RestConsumerTest {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 400 Bad Request"));
 
-        StepVerifier.create(restConsumer.validateToken("token"))
+        StepVerifier.create(restConsumer.validateTokenAndGetUserDetails("token"))
                 .expectError(IllegalArgumentException.class)
                 .verify();
     }
