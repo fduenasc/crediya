@@ -66,6 +66,66 @@ class HandlerTest {
     }
 
     @Test
+    void validateStatusIfPresentWithNullStatusTest() {
+        PaginationAndFilterParams params = new PaginationAndFilterParams(0, 10, null);
+
+        StepVerifier.create(handler.validateStatusIfPresent(params))
+                .expectNext(params)
+                .verifyComplete();
+    }
+
+    @Test
+    void validateStatusIfPresentWithValidStatusTest() {
+        PaginationAndFilterParams params = new PaginationAndFilterParams(0, 10, "Pendiente");
+
+        when(getLoanApplicationUseCase.existsByStatus("Pendiente"))
+                .thenReturn(Mono.just(true));
+
+        StepVerifier.create(handler.validateStatusIfPresent(params))
+                .expectNext(params)
+                .verifyComplete();
+    }
+
+    @Test
+    void validateStatusIfPresentWithInvalidStatusTest() {
+        PaginationAndFilterParams params = new PaginationAndFilterParams(0, 10, "InvalidStatus");
+
+        when(getLoanApplicationUseCase.existsByStatus("InvalidStatus"))
+                .thenReturn(Mono.just(false));
+
+        StepVerifier.create(handler.validateStatusIfPresent(params))
+                .expectErrorMatches(error -> error instanceof IllegalArgumentException &&
+                        error.getMessage().equals("Invalid status"))
+                .verify();
+    }
+
+    @Test
+    void validateStatusIfPresentWithEmptyStatusTest() {
+        PaginationAndFilterParams params = new PaginationAndFilterParams(0, 10, "");
+
+        when(getLoanApplicationUseCase.existsByStatus(""))
+                .thenReturn(Mono.just(false));
+
+        StepVerifier.create(handler.validateStatusIfPresent(params))
+                .expectErrorMatches(error -> error instanceof IllegalArgumentException &&
+                        error.getMessage().equals("Invalid status"))
+                .verify();
+    }
+
+    @Test
+    void validateStatusIfPresentWithUseCaseErrorTest() {
+        PaginationAndFilterParams params = new PaginationAndFilterParams(0, 10, "Pendiente");
+
+        when(getLoanApplicationUseCase.existsByStatus("Pendiente"))
+                .thenReturn(Mono.error(new RuntimeException("Database error")));
+
+        StepVerifier.create(handler.validateStatusIfPresent(params))
+                .expectError(RuntimeException.class)
+                .verify();
+    }
+    
+
+    @Test
     void enrichWithUserDataErrorInGetDataFromValidatedUserTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
         String token = "validToken";

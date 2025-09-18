@@ -249,7 +249,7 @@ public class Handler {
                 .doOnError(error -> log.error("Error enriching loan application with user data: {}", error.getMessage()));
     }
 
-    private Mono<PaginationAndFilterParams> validateStatusIfPresent(PaginationAndFilterParams params) {
+    protected Mono<PaginationAndFilterParams> validateStatusIfPresent(PaginationAndFilterParams params) {
         if (params.status() == null) {
             return Mono.just(params);
         }
