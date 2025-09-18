@@ -18,7 +18,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,8 +48,6 @@ class HandlerTest {
     private Validator validator;
     @Mock
     private ServerRequest serverRequest;
-    @Mock
-    private ServerRequest.Headers headers;
 
     private Handler handler;
 
@@ -66,6 +63,120 @@ class HandlerTest {
                 sendApprovedUseCase,
                 validator
         );
+    }
+
+    @Test
+    void sendApprovedMessageIfApproved_WithApprovedStatus_ShouldSendMessage() {
+        // Given
+        when(sendApprovedUseCase.send(anyString())).thenReturn(Mono.just("approved-message-id"));
+
+        // When & Then
+        StepVerifier.create(handler.sendApprovedMessageIfApproved("APROBADA"))
+                .verifyComplete();
+
+        verify(sendApprovedUseCase).send(anyString());
+    }
+
+    @Test
+    void sendApprovedMessageIfApproved_WithNonApprovedStatus_ShouldNotSendMessage() {
+        // When & Then
+        StepVerifier.create(handler.sendApprovedMessageIfApproved("RECHAZADA"))
+                .verifyComplete();
+
+        verifyNoInteractions(sendApprovedUseCase);
+    }
+
+    @Test
+    void sendApprovedMessageIfApproved_WithError_ShouldResumeOnError() {
+        // Given
+        when(sendApprovedUseCase.send(anyString()))
+                .thenReturn(Mono.error(new RuntimeException("SQS Error")));
+
+        // When & Then
+        StepVerifier.create(handler.sendApprovedMessageIfApproved("APROBADA"))
+                .verifyComplete();
+
+        verify(sendApprovedUseCase).send(anyString());
+    }
+
+    @Test
+    void sendGeneralNotification_Success_ShouldSendNotification() {
+        // Given
+        NotificationResponse notificationResponse = new NotificationResponse("test@mail.com", "APROBADA");
+        when(sendNotificationUseCase.send(anyString())).thenReturn(Mono.just("notification-message-id"));
+
+        // When & Then
+        StepVerifier.create(handler.sendGeneralNotification(notificationResponse))
+                .verifyComplete();
+
+        verify(sendNotificationUseCase).send(anyString());
+    }
+
+    @Test
+    void sendGeneralNotification_WithError_ShouldResumeOnError() {
+        // Given
+        NotificationResponse notificationResponse = new NotificationResponse("test@mail.com", "APROBADA");
+        when(sendNotificationUseCase.send(anyString()))
+                .thenReturn(Mono.error(new RuntimeException("Notification Error")));
+
+        // When & Then
+        StepVerifier.create(handler.sendGeneralNotification(notificationResponse))
+                .verifyComplete();
+
+        verify(sendNotificationUseCase).send(anyString());
+    }
+
+    @Test
+    void sendBothNotifications_WithApprovedStatus_ShouldSendBothMessages() {
+        // Given
+        NotificationResponse notificationResponse = new NotificationResponse("test@mail.com", "APROBADA");
+        when(sendNotificationUseCase.send(anyString())).thenReturn(Mono.just("notification-id"));
+        when(sendApprovedUseCase.send(anyString())).thenReturn(Mono.just("approved-id"));
+
+        // When & Then
+        StepVerifier.create(handler.sendBothNotifications(notificationResponse))
+                .verifyComplete();
+
+        verify(sendNotificationUseCase).send(anyString());
+        verify(sendApprovedUseCase).send(anyString());
+    }
+
+    @Test
+    void sendBothNotifications_WithNonApprovedStatus_ShouldSendOnlyGeneralNotification() {
+        // Given
+        NotificationResponse notificationResponse = new NotificationResponse("test@mail.com", "RECHAZADA");
+        when(sendNotificationUseCase.send(anyString())).thenReturn(Mono.just("notification-id"));
+
+        // When & Then
+        StepVerifier.create(handler.sendBothNotifications(notificationResponse))
+                .verifyComplete();
+
+        verify(sendNotificationUseCase).send(anyString());
+        verifyNoInteractions(sendApprovedUseCase);
+    }
+
+    @Test
+    void updateLoanApplicationStatus_WithApprovedStatusAndSendError_ShouldHandleErrors() {
+        // Given
+        UpdateLoanApplicationRequest request = new UpdateLoanApplicationRequest("APROBADA");
+        LoanApplication loanApp = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "APROBADA");
+
+        when(serverRequest.pathVariable("id")).thenReturn("1");
+        when(serverRequest.bodyToMono(UpdateLoanApplicationRequest.class)).thenReturn(Mono.just(request));
+        when(validator.validate(request)).thenReturn(Set.of());
+        when(updateLoanApplicationUseCase.updateLoanApplication(1L, "APROBADA")).thenReturn(Mono.empty());
+        when(getLoanApplicationUseCase.getLoanApplicationById(1L)).thenReturn(Mono.just(loanApp));
+        when(sendNotificationUseCase.send(anyString())).thenReturn(Mono.just("notification-id"));
+        when(sendApprovedUseCase.send(anyString()))
+                .thenReturn(Mono.error(new RuntimeException("Approved SQS Error")));
+
+        // When & Then
+        StepVerifier.create(handler.updateLoanApplicationStatus(serverRequest))
+                .expectNextMatches(response -> response.statusCode().is2xxSuccessful())
+                .verifyComplete();
+
+        verify(sendNotificationUseCase).send(anyString());
+        verify(sendApprovedUseCase).send(anyString());
     }
 
     @Test
@@ -236,7 +347,7 @@ class HandlerTest {
             "'','Token inválido'",
             "'Basic invalidToken','Token con prefijo inválido'"
     })
-    void extractTokenFromRequestInvalidTokenTest(String authHeader, String description) {
+    void extractTokenFromRequestInvalidTokenTest(String authHeader) {
         // Given
         ServerRequest request = mock(ServerRequest.class);
         ServerRequest.Headers mockHeaders = mock(ServerRequest.Headers.class);
