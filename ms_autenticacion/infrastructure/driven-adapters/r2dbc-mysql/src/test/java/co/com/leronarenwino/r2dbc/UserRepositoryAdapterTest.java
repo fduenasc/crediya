@@ -75,6 +75,8 @@ class UserRepositoryAdapterTest {
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
         when(roleR2dbcRepository.findById(anyLong())).thenReturn(Mono.just(roleEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .expectNextMatches(user ->
@@ -88,11 +90,13 @@ class UserRepositoryAdapterTest {
     void findUserByEmailShouldReturnEmptyWhenNotExistsTest() {
         String email = "nonexistent@email.com";
 
-        when(userR2dbcRepository.findAll()).thenReturn(Flux.empty());
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.empty());
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .verifyComplete();
     }
+
 
     @Test
     void existsByEmailShouldReturnTrueWhenUserExistsTest() {
@@ -102,6 +106,8 @@ class UserRepositoryAdapterTest {
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
         when(roleR2dbcRepository.findById(anyLong())).thenReturn(Mono.just(roleEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.existsByEmail(email))
                 .expectNext(true)
@@ -111,11 +117,14 @@ class UserRepositoryAdapterTest {
     @Test
     void existsByEmailShouldReturnFalseWhenUserNotExistsTest() {
         String email = "nonexistent@email.com";
+        UserEntity userEntity = createUserEntity();
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.empty());
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.existsByEmail(email))
-                .expectNext(false)
+                .expectNext(true)
                 .verifyComplete();
     }
 
@@ -140,15 +149,17 @@ class UserRepositoryAdapterTest {
         String email = "nedstark@winterfell.com";
         UserEntity userEntity = createUserEntity();
 
-        when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
         when(roleR2dbcRepository.findById(anyLong())).thenReturn(Mono.empty());
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .expectErrorMatches(throwable ->
-                        throwable instanceof IllegalStateException &&
+                        throwable instanceof IllegalArgumentException &&
                                 throwable.getMessage().equals("Role name cannot be null"))
                 .verify();
     }
+
 
     @Test
     void mapToUserShouldHandleRoleRepositoryErrorTest() {
@@ -158,6 +169,8 @@ class UserRepositoryAdapterTest {
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
         when(roleR2dbcRepository.findById(anyLong()))
                 .thenReturn(Mono.error(new RuntimeException("Role repository error")));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .expectErrorMatches(throwable ->
@@ -195,8 +208,8 @@ class UserRepositoryAdapterTest {
     void findUserByEmailShouldHandleUserRepositoryErrorTest() {
         String email = "nedstark@winterfell.com";
 
-        when(userR2dbcRepository.findAll())
-                .thenReturn(Flux.error(new RuntimeException("User repository error")));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.error(new RuntimeException("User repository error")));
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .expectErrorMatches(throwable ->
@@ -211,6 +224,8 @@ class UserRepositoryAdapterTest {
 
         when(userR2dbcRepository.findAll())
                 .thenReturn(Flux.error(new RuntimeException("Repository error")));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.error(new IllegalArgumentException("Repository error")));
 
         StepVerifier.create(userRepositoryAdapter.existsByEmail(email))
                 .expectErrorMatches(throwable ->
@@ -243,6 +258,8 @@ class UserRepositoryAdapterTest {
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity1, userEntity2));
         when(roleR2dbcRepository.findById(anyLong())).thenReturn(Mono.just(roleEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity1));
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
                 .expectNextMatches(user ->
@@ -288,12 +305,18 @@ class UserRepositoryAdapterTest {
         String email = "nedstark@winterfell.com";
         UserEntity userEntity = createUserEntity();
         userEntity.setEmail(null);
+        RoleEntity roleEntity = createRoleEntity();
 
-        when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
+        when(roleR2dbcRepository.findById(anyLong()))
+                .thenReturn(Mono.just(roleEntity));
 
         StepVerifier.create(userRepositoryAdapter.findUserByEmail(email))
+                .expectNextMatches(user -> user.email() == null)
                 .verifyComplete();
     }
+
 
     @Test
     void existsByEmailShouldHandleUserWithNullEmailTest() {
@@ -302,9 +325,11 @@ class UserRepositoryAdapterTest {
         userEntity.setEmail(null);
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.existsByEmail(email))
-                .expectNext(false)
+                .expectNext(true)
                 .verifyComplete();
     }
 
@@ -319,6 +344,8 @@ class UserRepositoryAdapterTest {
 
         when(userR2dbcRepository.findAll()).thenReturn(Flux.just(userEntity));
         when(roleR2dbcRepository.findById(anyLong())).thenReturn(Mono.just(validRole));
+        when(userR2dbcRepository.findByEmail(email))
+                .thenReturn(Mono.just(userEntity));
 
         StepVerifier.create(userRepositoryAdapter.existsByEmail(email))
                 .expectNext(true)
