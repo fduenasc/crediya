@@ -451,20 +451,8 @@ public class Handler {
                 .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
                 .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
                         .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData))
-                        .flatMap(capacity ->
-                                Mono.just(capacity)
-                                        .filter(capacityToFilter -> "APROBADA".equalsIgnoreCase(capacityToFilter.loanStatus()))
-                                        .flatMap(approvedCapacity -> buildApprovedMessage(approvedCapacity.loanStatus())
-                                                .flatMap(approvedMessage ->
-                                                        sendApprovedUseCase.send(approvedMessage)
-                                                                .publishOn(Schedulers.boundedElastic())
-                                                                .doOnSuccess(messageId -> log.info("Approved message sent to SQS with message ID: {}", messageId))
-                                                                .doOnError(error -> log.error("Error sending approved message to SQS: {}", error.getMessage()))
-                                                                .onErrorResume(error -> Mono.empty())
-                                                )
-                                        )
-                                        .then(Mono.just(capacity))
-                        )
+                        .flatMap(capacity -> sendApprovedMessageIfApproved(capacity.loanStatus())
+                                .then(Mono.just(capacity)))
                         .doOnSuccess(capacity -> log.info("Loan application saved successfully with capacity: {}", capacity))
                         .flatMap(capacity -> ServerResponse.ok()
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -613,20 +601,45 @@ public class Handler {
                                 .flatMap(request -> updateLoanApplicationUseCase.updateLoanApplication(id, request.loanStatus())
                                         .then(getLoanApplicationUseCase.getLoanApplicationById(id))
                                         .map(NotificationResponse::toNotificationResponse))
-                                .flatMap(notificationResponse ->
-                                        buildNotificationMessage(notificationResponse)
-                                                .flatMap(notificationMessage ->
-                                                        sendNotificationUseCase.send(notificationMessage)
-                                                                .publishOn(Schedulers.boundedElastic())
-                                                                .doOnSuccess(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId))
-                                                                .doOnError(error -> log.error("Error sending notification to SQS: {}", error.getMessage()))
-                                                                .onErrorResume(error -> Mono.empty())
-                                                )
-                                )
+                                .flatMap(this::sendBothNotifications)
                                 .then(ServerResponse.ok()
                                         .contentType(MediaType.APPLICATION_JSON)
                                         .bodyValue(success(null, "Loan application loanStatus successfully updated")))
                                 .doOnSuccess(ignored -> log.info("Loan application loanStatus successfully updated!")));
+    }
+
+    protected Mono<Void> sendApprovedMessageIfApproved(String status) {
+        return Mono.just(status)
+                .filter("APROBADA"::equalsIgnoreCase)
+                .flatMap(approvedStatus -> buildApprovedMessage(approvedStatus)
+                        .flatMap(approvedMessage ->
+                                sendApprovedUseCase.send(approvedMessage)
+                                        .publishOn(Schedulers.boundedElastic())
+                                        .doOnSuccess(messageId -> log.info("Approved message sent to SQS with message ID: {}", messageId))
+                                        .doOnError(error -> log.error("Error sending approved message to SQS: {}", error.getMessage()))
+                                        .onErrorResume(error -> Mono.empty())
+                                        .then()
+                        )
+                )
+                .then();
+    }
+
+    protected Mono<Void> sendGeneralNotification(NotificationResponse notificationResponse) {
+        return buildNotificationMessage(notificationResponse)
+                .flatMap(notificationMessage ->
+                        sendNotificationUseCase.send(notificationMessage)
+                                .publishOn(Schedulers.boundedElastic())
+                                .doOnSuccess(messageId -> log.info("Notification sent to SQS with message ID: {}", messageId))
+                                .doOnError(error -> log.error("Error sending notification to SQS: {}", error.getMessage()))
+                                .onErrorResume(error -> Mono.empty())
+                                .then()
+                );
+    }
+
+    protected Mono<Void> sendBothNotifications(NotificationResponse notificationResponse) {
+        Mono<Void> generalNotification = sendGeneralNotification(notificationResponse);
+        Mono<Void> approvedNotification = sendApprovedMessageIfApproved(notificationResponse.status());
+        return Mono.when(generalNotification, approvedNotification);
     }
 
     public Mono<Long> getPathVariable(ServerRequest serverRequest, String id) {
