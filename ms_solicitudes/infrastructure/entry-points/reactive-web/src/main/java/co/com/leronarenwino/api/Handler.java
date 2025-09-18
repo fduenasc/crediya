@@ -29,6 +29,7 @@ import reactor.util.function.Tuples;
 import java.util.List;
 import java.util.Set;
 
+import static co.com.leronarenwino.api.dto.ApprovedResponse.buildApprovedMessage;
 import static co.com.leronarenwino.api.dto.GenericResponse.success;
 import static co.com.leronarenwino.api.dto.LoanApplicationResponse.toLoanApplicationResponse;
 import static co.com.leronarenwino.api.dto.NotificationResponse.buildNotificationMessage;
@@ -48,6 +49,7 @@ public class Handler {
     private final ValidateUserUseCase validateUserUseCase;
 
     private final SendNotificationUseCase sendNotificationUseCase;
+    private final SendApprovedUseCase sendApprovedUseCase;
 
     private final Validator validator;
 
@@ -58,6 +60,7 @@ public class Handler {
             GetLoanTypeUseCase getLoanTypeUseCase,
             ValidateUserUseCase validateUserUseCase,
             SendNotificationUseCase sendNotificationUseCase,
+            SendApprovedUseCase sendApprovedUseCase,
             Validator validator
     ) {
         this.saveLoanApplicationUseCase = saveLoanApplicationUseCase;
@@ -66,6 +69,7 @@ public class Handler {
         this.getLoanTypeUseCase = getLoanTypeUseCase;
         this.validateUserUseCase = validateUserUseCase;
         this.sendNotificationUseCase = sendNotificationUseCase;
+        this.sendApprovedUseCase = sendApprovedUseCase;
         this.validator = validator;
     }
 
@@ -447,12 +451,25 @@ public class Handler {
                 .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
                 .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
                         .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData))
+                        .flatMap(capacity ->
+                                Mono.just(capacity)
+                                        .filter(capacityToFilter -> "APROBADA".equalsIgnoreCase(capacityToFilter.loanStatus()))
+                                        .flatMap(approvedCapacity -> buildApprovedMessage(approvedCapacity.loanStatus())
+                                                .flatMap(approvedMessage ->
+                                                        sendApprovedUseCase.send(approvedMessage)
+                                                                .publishOn(Schedulers.boundedElastic())
+                                                                .doOnSuccess(messageId -> log.info("Approved message sent to SQS with message ID: {}", messageId))
+                                                                .doOnError(error -> log.error("Error sending approved message to SQS: {}", error.getMessage()))
+                                                                .onErrorResume(error -> Mono.empty())
+                                                )
+                                        )
+                                        .then(Mono.just(capacity))
+                        )
                         .doOnSuccess(capacity -> log.info("Loan application saved successfully with capacity: {}", capacity))
                         .flatMap(capacity -> ServerResponse.ok()
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .bodyValue(success(capacity, "Loan application successfully registered")))
-                )
-                .doOnSuccess(ignored -> log.info("Loan application successfully registered!"));
+                        .doOnSuccess(ignored -> log.info("Loan application successfully registered!")));
     }
 
     @Operation(

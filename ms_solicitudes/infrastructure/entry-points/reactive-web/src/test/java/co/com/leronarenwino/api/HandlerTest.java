@@ -44,6 +44,8 @@ class HandlerTest {
     @Mock
     private SendNotificationUseCase sendNotificationUseCase;
     @Mock
+    private SendApprovedUseCase sendApprovedUseCase;
+    @Mock
     private Validator validator;
     @Mock
     private ServerRequest serverRequest;
@@ -61,6 +63,7 @@ class HandlerTest {
                 getLoanTypeUseCase,
                 validateUserUseCase,
                 sendNotificationUseCase,
+                sendApprovedUseCase,
                 validator
         );
     }
