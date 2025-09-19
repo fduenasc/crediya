@@ -17,4 +17,4 @@ entrypoint:
     waitTimeSeconds: 20
     maxNumberOfMessages: 10
     visibilityTimeoutSeconds: 10
-    numberOfThreads: 2
+    numberOfThreads: 1
