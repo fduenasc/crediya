@@ -102,6 +102,36 @@ services:
       interval: 30s
     restart: unless-stopped
 
+  # Microservicio de Reportes
+  ms-reportes:
+    build:
+      context: ./ms_reportes
+      dockerfile: Dockerfile
+    container_name: ms-reportes
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_USER_GENERATOR: ${JWT_USER_GENERATOR}
+      MS_AUTENTICACION_URL: http://ms-autenticacion:8080
+      MS_SOLICITUDES_URL: http://ms-solicitudes:8081
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql-auth:
+        condition: service_healthy
+      mysql-loan:
+        condition: service_healthy
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      timeout: 30s
+      retries: 5
+      interval: 30s
+    restart: unless-stopped
+
   # LocalStack para servicios AWS simulados
   # localstack:
   #   container_name: localstack
