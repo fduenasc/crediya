@@ -1,7 +1,6 @@
 package co.com.leronarenwino.sqs.listener.helper;
 
 import co.com.leronarenwino.sqs.listener.config.SQSProperties;
-import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import reactor.core.Disposable;
@@ -13,6 +12,7 @@ import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -21,11 +21,29 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
-public record SQSListener(SqsAsyncClient client, SQSProperties properties, Function<Message, Mono<Void>> processor) {
+public class SQSListener {
+
     private static final Logger log = LogManager.getLogger(SQSListener.class);
-    private static final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
-    private static final List<Disposable> subscriptions = new CopyOnWriteArrayList<>();
-    private static ExecutorService executorService;
+
+    private final SqsAsyncClient client;
+    private final SQSProperties properties;
+    private final Function<Message, Mono<Void>> processor;
+    private final AtomicBoolean isShuttingDown;
+    private final List<Disposable> subscriptions;
+    private final ExecutorService executorService;
+
+    private SQSListener(SqsAsyncClient client, SQSProperties properties, Function<Message, Mono<Void>> processor) {
+        this.client = client;
+        this.properties = properties;
+        this.processor = processor;
+        this.isShuttingDown = new AtomicBoolean(false);
+        this.subscriptions = new CopyOnWriteArrayList<>();
+        this.executorService = Executors.newFixedThreadPool(properties.numberOfThreads());
+    }
+
+    public static SQSListenerBuilder builder() {
+        return new SQSListenerBuilder();
+    }
 
     public SQSListener start() {
         if (isShuttingDown.get()) {
@@ -33,161 +51,120 @@ public record SQSListener(SqsAsyncClient client, SQSProperties properties, Funct
             return this;
         }
 
-        executorService = Executors.newFixedThreadPool(properties.numberOfThreads());
-        Flux<Void> flow = listenRetryRepeat().publishOn(Schedulers.fromExecutorService(executorService));
+        log.info("Starting SQS listener for queue: {}", properties.queueUrl());
 
-        for (var i = 0; i < properties.numberOfThreads(); i++) {
-            Disposable subscription = flow.subscribe(
-                    null,
-                    error -> log.error("SQS subscription error", error),
-                    () -> log.info("SQS subscription completed")
-            );
+        for (int i = 0; i < properties.numberOfThreads(); i++) {
+            Disposable subscription = Flux.interval(Duration.ofSeconds(1))
+                    .takeWhile(tick -> !isShuttingDown.get())
+                    .flatMap(tick -> pollMessages())
+                    .subscribeOn(Schedulers.fromExecutor(executorService))
+                    .doOnError(error -> log.error("Error in SQS polling: {}", error.getMessage()))
+                    .onErrorContinue((error, obj) -> log.warn("Continuing after error: {}", error.getMessage()))
+                    .subscribe();
+
             subscriptions.add(subscription);
         }
+
         return this;
     }
 
-    private Flux<Void> listenRetryRepeat() {
-        return listen()
-                .doOnError(e -> {
-                    if (!isShuttingDown.get()) {
-                        log.error("Error listening sqs queue", e);
-                    }
-                })
-                .repeat(() -> !isShuttingDown.get());
-    }
-
-    private Flux<Void> listen() {
-        return getMessages()
-                .takeWhile(message -> !isShuttingDown.get())
-                .flatMap(message -> {
-                    if (isShuttingDown.get()) {
-                        return Mono.empty();
-                    }
-                    return processor.apply(message)
-                            .then(confirm(message))
-                            .onErrorResume(error -> {
-                                if (!isShuttingDown.get()) {
-                                    log.error("Error processing SQS message", error);
-                                }
-                                return Mono.empty();
-                            });
-                })
-                .onErrorContinue((e, o) -> {
-                    if (!isShuttingDown.get()) {
-                        log.error("Error listening sqs message", e);
-                    }
-                });
-    }
-
-    private Mono<Void> confirm(Message message) {
-        if (isShuttingDown.get()) {
-            return Mono.empty();
-        }
-
-        return Mono.fromCallable(() -> getDeleteMessageRequest(message.receiptHandle()))
-                .flatMap(request -> Mono.fromFuture(client.deleteMessage(request)))
-                .onErrorResume(error -> {
-                    if (!isShuttingDown.get()) {
-                        log.error("Error confirming message deletion", error);
-                    }
-                    return Mono.empty();
-                })
-                .then();
-    }
-
-    private Flux<Message> getMessages() {
-        if (isShuttingDown.get()) {
-            return Flux.empty();
-        }
-
-        return Mono.fromCallable(this::getReceiveMessageRequest)
-                .flatMap(request -> Mono.fromFuture(client.receiveMessage(request)))
-                .doOnNext(response -> {
-                    if (!isShuttingDown.get()) {
-                        log.debug("{} received messages from sqs", response.messages().size());
-                    }
-                })
-                .flatMapMany(response -> Flux.fromIterable(response.messages()))
-                .onErrorResume(error -> {
-                    if (!isShuttingDown.get()) {
-                        log.error("Error receiving messages from SQS", error);
-                    }
-                    return Flux.empty();
-                });
-    }
-
-    @PreDestroy
     public void shutdown() {
         log.info("Initiating SQS listener shutdown");
         isShuttingDown.set(true);
 
+        // Dispose all subscriptions
         subscriptions.forEach(Disposable::dispose);
         subscriptions.clear();
 
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
-                    log.warn("Executor service did not terminate gracefully, forcing shutdown");
-                    executorService.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                log.warn("Interrupted while waiting for executor service termination");
+        // Shutdown executor
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
                 executorService.shutdownNow();
-                Thread.currentThread().interrupt();
             }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
         }
 
         log.info("SQS listener shutdown completed");
     }
 
-    private ReceiveMessageRequest getReceiveMessageRequest() {
-        return ReceiveMessageRequest.builder()
+    private Mono<Void> pollMessages() {
+        if (isShuttingDown.get()) {
+            return Mono.empty();
+        }
+
+        ReceiveMessageRequest request = ReceiveMessageRequest.builder()
                 .queueUrl(properties.queueUrl())
-                .maxNumberOfMessages(properties.maxNumberOfMessages())
                 .waitTimeSeconds(properties.waitTimeSeconds())
-                .visibilityTimeout(properties.visibilityTimeoutSeconds())
+                .maxNumberOfMessages(properties.maxNumberOfMessages())
                 .build();
+
+        return Mono.fromFuture(client.receiveMessage(request))
+                .flatMapMany(response -> Flux.fromIterable(response.messages()))
+                .flatMap(this::processMessage)
+                .then()
+                .onErrorResume(error -> {
+                    if (!isShuttingDown.get()) {
+                        log.error("Error polling messages: {}", error.getMessage());
+                    }
+                    return Mono.empty();
+                });
     }
 
-    private DeleteMessageRequest getDeleteMessageRequest(String receiptHandle) {
-        return DeleteMessageRequest.builder()
+    private Mono<Void> processMessage(Message message) {
+        if (isShuttingDown.get()) {
+            return Mono.empty();
+        }
+
+        return processor.apply(message)
+                .then(deleteMessage(message))
+                .doOnSuccess(result -> log.debug("Message processed successfully: {}", message.messageId()))
+                .doOnError(error -> log.error("Error processing message {}: {}", message.messageId(), error.getMessage()))
+                .onErrorResume(error -> Mono.empty());
+    }
+
+    private Mono<Void> deleteMessage(Message message) {
+        if (isShuttingDown.get()) {
+            return Mono.empty();
+        }
+
+        DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
                 .queueUrl(properties.queueUrl())
-                .receiptHandle(receiptHandle)
+                .receiptHandle(message.receiptHandle())
                 .build();
+
+        return Mono.fromFuture(client.deleteMessage(deleteRequest))
+                .then()
+                .onErrorResume(error -> {
+                    log.warn("Failed to delete message {}: {}", message.messageId(), error.getMessage());
+                    return Mono.empty();
+                });
     }
 
-    // Builder pattern remains the same...
     public static class SQSListenerBuilder {
         private SqsAsyncClient client;
         private SQSProperties properties;
         private Function<Message, Mono<Void>> processor;
 
-        SQSListenerBuilder() {
-        }
-
-        public SQSListenerBuilder client(final SqsAsyncClient client) {
+        public SQSListenerBuilder client(SqsAsyncClient client) {
             this.client = client;
             return this;
         }
 
-        public SQSListenerBuilder properties(final SQSProperties properties) {
+        public SQSListenerBuilder properties(SQSProperties properties) {
             this.properties = properties;
             return this;
         }
 
-        public SQSListenerBuilder processor(final Function<Message, Mono<Void>> processor) {
+        public SQSListenerBuilder processor(Function<Message, Mono<Void>> processor) {
             this.processor = processor;
             return this;
         }
 
         public SQSListener build() {
-            return new SQSListener(this.client, this.properties, this.processor);
+            return new SQSListener(client, properties, processor);
         }
-    }
-
-    public static SQSListenerBuilder builder() {
-        return new SQSListenerBuilder();
     }
 }
