@@ -1,41 +1,23 @@
 package co.com.leronarenwino.config;
 
+import co.com.leronarenwino.model.gateway.ReportGateway;
+import co.com.leronarenwino.usecase.GetTotalApprovedLoansUseCase;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.mockito.Mockito;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class UseCasesConfigTest {
 
     @Test
-    void testUseCaseBeansExist() {
-        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class)) {
-            String[] beanNames = context.getBeanDefinitionNames();
+    void saveLoanApplicationUseCaseBeanIsCreated() {
+        ReportGateway reportGateway = Mockito.mock(ReportGateway.class);
 
-            boolean useCaseBeanFound = false;
-            for (String beanName : beanNames) {
-                if (beanName.endsWith("UseCase")) {
-                    useCaseBeanFound = true;
-                    break;
-                }
-            }
+        UseCasesConfig config = new UseCasesConfig();
+        GetTotalApprovedLoansUseCase useCase = config.getTotalApprovedLoansUseCase(
+                reportGateway
+        );
 
-            assertTrue(useCaseBeanFound, "No beans ending with 'Use Case' were found");
-        }
-    }
-
-    @Configuration
-    @Import(UseCasesConfig.class)
-    static class TestConfig {
-
-        @Bean
-        public MyUseCase myUseCase() {
-            return new MyUseCase();
-        }
-    }
-
-    static class MyUseCase {
+        assertNotNull(useCase);
     }
 }
