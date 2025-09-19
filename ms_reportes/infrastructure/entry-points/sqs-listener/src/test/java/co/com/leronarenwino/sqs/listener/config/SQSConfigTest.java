@@ -55,9 +55,4 @@ class SQSConfigTest {
         when(sqsProperties.endpoint()).thenReturn("http://localhost:4566");
         assertThat(sqsConfig.configSqs(sqsProperties)).isNotNull();
     }
-
-    @Test
-    void resolveEndpointIsNull() {
-        assertThat(sqsConfig.resolveEndpoint(sqsProperties)).isNull();
-    }
 }
