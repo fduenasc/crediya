@@ -5,4 +5,5 @@ import reactor.core.publisher.Mono;
 
 public interface ReportGateway {
     Mono<Report> getTotalApprovedLoans();
+    Mono<Void> incrementTotalApprovedLoans();
 }

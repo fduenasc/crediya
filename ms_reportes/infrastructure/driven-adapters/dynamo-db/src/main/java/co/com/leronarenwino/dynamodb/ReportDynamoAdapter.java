@@ -10,6 +10,11 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
+
+import java.util.Map;
 
 import static co.com.leronarenwino.model.Report.defaultTotalApprovedLoans;
 
@@ -21,9 +26,11 @@ public class ReportDynamoAdapter implements ReportGateway {
 
     private static final Logger log = LoggerFactory.getLogger(ReportDynamoAdapter.class);
 
-    private final DynamoDbEnhancedAsyncClient dynamoClient;
+    private final DynamoDbEnhancedAsyncClient enhancedClient;
+    private final DynamoDbAsyncClient dynamoClient;
 
-    public ReportDynamoAdapter(DynamoDbEnhancedAsyncClient dynamoClient) {
+    public ReportDynamoAdapter(DynamoDbEnhancedAsyncClient enhancedClient, DynamoDbAsyncClient dynamoClient) {
+        this.enhancedClient = enhancedClient;
         this.dynamoClient = dynamoClient;
     }
 
@@ -32,7 +39,7 @@ public class ReportDynamoAdapter implements ReportGateway {
         log.info("Getting total approved loans from DynamoDB");
 
         try {
-            DynamoDbAsyncTable<ReportEntity> table = dynamoClient.table(TABLE_NAME, TableSchema.fromBean(ReportEntity.class));
+            DynamoDbAsyncTable<ReportEntity> table = enhancedClient.table(TABLE_NAME, TableSchema.fromBean(ReportEntity.class));
 
             Key key = Key.builder()
                     .partitionValue(TOTAL_APROBADOS_KEY)
@@ -41,10 +48,10 @@ public class ReportDynamoAdapter implements ReportGateway {
             return Mono.fromFuture(table.getItem(key))
                     .map(entity -> {
                         if (entity != null) {
-                            log.info("Register found: {}", entity);
+                            log.info("Found record: {}", entity);
                             return new Report(entity.getMetrica(), entity.getValor());
                         } else {
-                            log.info("Not found {} record, returning 0", TOTAL_APROBADOS_KEY);
+                            log.info("No record found, returning default");
                             return defaultTotalApprovedLoans();
                         }
                     })
@@ -60,5 +67,29 @@ public class ReportDynamoAdapter implements ReportGateway {
             log.error("Unexpected error: {}", e.getMessage());
             return Mono.error(e);
         }
+    }
+
+    @Override
+    public Mono<Void> incrementTotalApprovedLoans() {
+        log.info("Incrementing total approved loans in DynamoDB");
+
+        UpdateItemRequest updateRequest = UpdateItemRequest.builder()
+                .tableName(TABLE_NAME)
+                .key(Map.of("metrica", AttributeValue.fromS(TOTAL_APROBADOS_KEY)))
+                .updateExpression("SET valor = if_not_exists(valor, :start) + :inc")
+                .expressionAttributeValues(Map.of(
+                        ":inc", AttributeValue.fromN("1"),
+                        ":start", AttributeValue.fromN("0")
+                ))
+                .build();
+
+        return Mono.fromFuture(dynamoClient.updateItem(updateRequest))
+                .doOnSuccess(response -> log.info("Counter incremented successfully"))
+                .doOnError(error -> log.error("Error incrementing counter: {}", error.getMessage()))
+                .then()
+                .onErrorResume(error -> {
+                    log.error("Error incrementing counter in DynamoDB: {}", error.getMessage());
+                    return Mono.error(error);
+                });
     }
 }

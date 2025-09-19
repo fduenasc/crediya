@@ -2,6 +2,7 @@ package co.com.leronarenwino.config;
 
 import co.com.leronarenwino.model.gateway.ReportGateway;
 import co.com.leronarenwino.usecase.GetTotalApprovedLoansUseCase;
+import co.com.leronarenwino.usecase.IncrementTotalApprovedLoansUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -20,4 +21,8 @@ public class UseCasesConfig {
         return new GetTotalApprovedLoansUseCase(reportGateway);
     }
 
+    @Bean
+    public IncrementTotalApprovedLoansUseCase incrementTotalApprovedLoansUseCase(ReportGateway reportGateway) {
+        return new IncrementTotalApprovedLoansUseCase(reportGateway);
+    }
 }
