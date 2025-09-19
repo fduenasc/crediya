@@ -1,6 +1,7 @@
 ##Spring Configuration
 server:
   port: 8082
+  shutdown: graceful
 spring:
   application:
     name: "ms_reportes"
@@ -10,6 +11,8 @@ spring:
       path: "/h2"
   profiles:
     include: null
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 security:
   user:
     protected-password: "[PROTECTED]"

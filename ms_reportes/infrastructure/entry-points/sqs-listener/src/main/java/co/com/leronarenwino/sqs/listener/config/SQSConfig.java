@@ -1,6 +1,7 @@
 package co.com.leronarenwino.sqs.listener.config;
 
 import co.com.leronarenwino.sqs.listener.helper.SQSListener;
+import jakarta.annotation.PreDestroy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Mono;
@@ -15,28 +16,42 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 import software.amazon.awssdk.services.sqs.model.Message;
 
-import java.net.URI;
 import java.util.function.Function;
 
 @Configuration
 public class SQSConfig {
 
+    private SQSListener sqsListener;
+    private SqsAsyncClient sqsClient;
+
     @Bean
     public SQSListener sqsListener(SqsAsyncClient client, SQSProperties properties, Function<Message, Mono<Void>> fn) {
-        return SQSListener.builder()
+        this.sqsListener = SQSListener.builder()
                 .client(client)
                 .properties(properties)
                 .processor(fn)
                 .build()
                 .start();
+        return this.sqsListener;
     }
 
     @Bean
     public SqsAsyncClient configSqs(SQSProperties properties) {
-        return SqsAsyncClient.builder()
+        this.sqsClient = SqsAsyncClient.builder()
                 .region(Region.of(properties.region()))
                 .credentialsProvider(getProviderChain())
                 .build();
+        return this.sqsClient;
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        if (sqsListener != null) {
+            sqsListener.shutdown();
+        }
+        if (sqsClient != null) {
+            sqsClient.close();
+        }
     }
 
     private AwsCredentialsProviderChain getProviderChain() {
@@ -48,12 +63,5 @@ public class SQSConfig {
                 .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
                 .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
                 .build();
-    }
-
-    protected URI resolveEndpoint(SQSProperties properties) {
-        if (properties.endpoint() != null) {
-            return URI.create(properties.endpoint());
-        }
-        return null;
     }
 }
