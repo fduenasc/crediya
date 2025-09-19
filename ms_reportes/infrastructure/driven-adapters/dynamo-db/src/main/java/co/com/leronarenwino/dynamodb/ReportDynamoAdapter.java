@@ -11,6 +11,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
+import static co.com.leronarenwino.model.Report.defaultTotalApprovedLoans;
+
 @Repository
 public class ReportDynamoAdapter implements ReportGateway {
 
@@ -43,12 +45,12 @@ public class ReportDynamoAdapter implements ReportGateway {
                             return new Report(entity.getMetrica(), entity.getValor());
                         } else {
                             log.info("Not found {} record, returning 0", TOTAL_APROBADOS_KEY);
-                            return Report.totalApprovedLoans(0);
+                            return defaultTotalApprovedLoans();
                         }
                     })
                     .switchIfEmpty(Mono.fromSupplier(() -> {
                         log.info("No record found, returning 0");
-                        return Report.totalApprovedLoans(0);
+                        return defaultTotalApprovedLoans();
                     }))
                     .onErrorResume(error -> {
                         log.error("Error fetching data from DynamoDB: {}", error.getMessage());

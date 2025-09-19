@@ -4,7 +4,7 @@ public record Report(
         String metric,
         Integer value
 ) {
-    public static Report totalApprovedLoans(Integer total) {
-        return new Report("TOTAL_APROBADOS", total);
+    public static Report defaultTotalApprovedLoans() {
+        return new Report("TOTAL_APROBADOS", 0);
     }
 }
