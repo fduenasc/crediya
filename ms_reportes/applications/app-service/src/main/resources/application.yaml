@@ -10,6 +10,13 @@ spring:
       path: "/h2"
   profiles:
     include: null
+security:
+  user:
+    protected-password: "[PROTECTED]"
+adapter:
+  restconsumer:
+    url: "${MS_AUTENTICACION_URL:http://localhost:8080}"
+    timeout: 5000
 entrypoint:
   sqs:
     region: "us-east-1"
