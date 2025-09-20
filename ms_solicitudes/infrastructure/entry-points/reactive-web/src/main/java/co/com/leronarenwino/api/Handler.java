@@ -220,7 +220,7 @@ public class Handler {
     public Mono<ServerResponse> getAllLoanApplications(ServerRequest serverRequest) {
         log.info("Get /api/v1/loan-application request received");
         return getAuthenticatedUsername()
-                .then(Mono.fromCallable(() -> extractPaginationAndFilterParams(serverRequest)))
+                .then(extractPaginationAndFilterParamsReactive(serverRequest))
                 .doOnNext(params -> log.info("Parameters - page: {}, size: {}, status: {}",
                         params.page(), params.size(), params.status()))
                 .flatMap(this::validateStatusIfPresent)
@@ -264,16 +264,18 @@ public class Handler {
                         : Mono.error(new IllegalArgumentException("Invalid status")));
     }
 
-    protected PaginationAndFilterParams extractPaginationAndFilterParams(ServerRequest serverRequest) {
+    protected Mono<PaginationAndFilterParams> extractPaginationAndFilterParamsReactive(ServerRequest serverRequest) {
         int page = serverRequest.queryParam("page")
                 .map(Integer::parseInt)
                 .orElse(0);
-        int size = serverRequest.queryParam("size")
-                .map(Integer::parseInt)
-                .orElse(10);
+
+        Mono<Integer> sizeMono = serverRequest.queryParam("size")
+                .map(sizeStr -> Mono.just(Integer.parseInt(sizeStr)))
+                .orElseGet(() -> getLoanApplicationUseCase.countLoanApplications().map(Long::intValue));
+
         String status = serverRequest.queryParam("status")
                 .orElse(null);
-        return new PaginationAndFilterParams(page, size, status);
+        return sizeMono.map(size -> new PaginationAndFilterParams(page, size, status));
     }
 
     PaginatedResponse<LoanApplicationResponse> createPaginatedResponse(
