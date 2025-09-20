@@ -3,7 +3,7 @@ apply plugin: 'org.springframework.boot'
 dependencies {
 	implementation project(':sqs-listener')
 	implementation project(':dynamo-db')
-    implementation project(':rest-consumer')
+    implementation project(':authentication-rest-consumer')
 	implementation project(':reactive-web')
     implementation project(':model')
     implementation project(':usecase')
