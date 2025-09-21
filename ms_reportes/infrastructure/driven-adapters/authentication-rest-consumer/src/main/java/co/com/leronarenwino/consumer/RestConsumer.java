@@ -1,6 +1,7 @@
 package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.dto.GenericResponse;
+import co.com.leronarenwino.consumer.dto.TokenValidationResponse;
 import co.com.leronarenwino.model.UserData;
 import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import org.slf4j.Logger;
