@@ -1,5 +1,7 @@
 package co.com.leronarenwino.api;
 
+import co.com.leronarenwino.api.dto.GenericResponse;
+import co.com.leronarenwino.api.dto.TotalLoanApplicationsResponse;
 import co.com.leronarenwino.usecase.GetTotalApprovedLoansUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,10 +37,17 @@ public class Handler {
         return getTotalApprovedLoansUseCase.getApprovedLoanApplications(token)
                 .collectList()
                 .flatMap(loanApplications -> {
-                    log.info("Get approved loan applications: {}", loanApplications);
+                    double totalLoanAmount = loanApplications.stream()
+                            .mapToDouble(loanApplication -> loanApplication.loanAmount() != null ? loanApplication.loanAmount() : 0)
+                            .sum();
+                    var responseDto = new TotalLoanApplicationsResponse(totalLoanAmount, loanApplications);
+                    var genericResponse = GenericResponse.success(
+                            responseDto,
+                            "Total loan amount and applications retrieved successfully"
+                    );
                     return ServerResponse.ok()
                             .contentType(MediaType.APPLICATION_JSON)
-                            .bodyValue(loanApplications);
+                            .bodyValue(genericResponse);
                 });
     }
 }
