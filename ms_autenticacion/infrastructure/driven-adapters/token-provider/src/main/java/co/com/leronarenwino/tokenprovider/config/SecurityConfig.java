@@ -1,8 +1,8 @@
 package co.com.leronarenwino.tokenprovider.config;
 
+import co.com.leronarenwino.jwtutils.JwtUtils;
 import co.com.leronarenwino.model.gateway.UserRepository;
 import co.com.leronarenwino.tokenprovider.filter.JwtTokenAuthenticationFilter;
-import co.com.leronarenwino.tokenprovider.util.JwtUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

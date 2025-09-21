@@ -1,6 +1,6 @@
-package co.com.leronarenwino.tokenprovider.util;
+package co.com.leronarenwino.jwtutils;
 
-import co.com.leronarenwino.tokenprovider.config.JwtProperties;
+import co.com.leronarenwino.jwtutils.config.JwtProperties;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
@@ -58,7 +58,7 @@ public class JwtUtils {
                     .build();
             return verifier.verify(token);
         } catch (JWTVerificationException e) {
-            throw new JWTVerificationException("Token JWT inválido", e);
+            throw new JWTVerificationException("Invalid or expired JWT token", e);
         }
     }
 

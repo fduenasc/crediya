@@ -1,10 +1,10 @@
 package co.com.leronarenwino.tokenprovider;
 
+import co.com.leronarenwino.jwtutils.JwtUtils;
+import co.com.leronarenwino.jwtutils.config.JwtProperties;
 import co.com.leronarenwino.model.gateway.AuthService;
 import co.com.leronarenwino.model.Credentials;
 import co.com.leronarenwino.model.Auth;
-import co.com.leronarenwino.tokenprovider.config.JwtProperties;
-import co.com.leronarenwino.tokenprovider.util.JwtUtils;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
@@ -46,7 +46,7 @@ public class AuthServiceAdapter implements AuthService {
                 DecodedJWT decodedJWT = jwtUtils.validateToken(token);
                 return jwtUtils.extractUsername(decodedJWT);
             } catch (JWTVerificationException e) {
-                throw new IllegalArgumentException("Invalid or expired token");
+                throw new IllegalArgumentException("Invalid or expired JWT token");
             }
         });
     }

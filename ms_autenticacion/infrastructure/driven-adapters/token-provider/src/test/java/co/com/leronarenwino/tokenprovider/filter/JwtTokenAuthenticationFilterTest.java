@@ -1,6 +1,6 @@
 package co.com.leronarenwino.tokenprovider.filter;
 
-import co.com.leronarenwino.tokenprovider.util.JwtUtils;
+import co.com.leronarenwino.jwtutils.JwtUtils;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;

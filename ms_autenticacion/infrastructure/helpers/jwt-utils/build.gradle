@@ -1,9 +1,7 @@
 dependencies {
     implementation project(':model')
-    implementation project(':jwt-utils')
     implementation 'org.springframework:spring-context'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.security:spring-security-core:6.5.3'
     implementation 'com.auth0:java-jwt:4.5.0'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
 }

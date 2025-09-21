@@ -1,8 +1,8 @@
 package co.com.leronarenwino.tokenprovider;
 
+import co.com.leronarenwino.jwtutils.JwtUtils;
+import co.com.leronarenwino.jwtutils.config.JwtProperties;
 import co.com.leronarenwino.model.Credentials;
-import co.com.leronarenwino.tokenprovider.config.JwtProperties;
-import co.com.leronarenwino.tokenprovider.util.JwtUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

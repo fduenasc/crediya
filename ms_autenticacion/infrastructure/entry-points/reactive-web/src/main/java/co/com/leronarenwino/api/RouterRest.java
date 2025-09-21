@@ -45,9 +45,9 @@ public class RouterRest {
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(GET("/api/v1/user/{email}"), handler::getUser)
+        return route(GET("/api/v1/user/{email}"), handler::getUserDataByEmailPathVariable)
                 .andRoute(POST("/api/v1/users"), handler::saveUser)
                 .andRoute(POST("/api/v1/login"), handler::login)
-                .andRoute(POST("/api/v1/validate"), handler::validateToken);
+                .andRoute(GET("/api/v1/validate"), handler::validateToken);
     }
 }

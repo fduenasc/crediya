@@ -1,6 +1,9 @@
 package co.com.leronarenwino.api;
 
-import co.com.leronarenwino.api.dto.*;
+import co.com.leronarenwino.api.dto.GenericResponse;
+import co.com.leronarenwino.api.dto.LoginRequest;
+import co.com.leronarenwino.api.dto.UserDataRequest;
+import co.com.leronarenwino.api.dto.UserRequest;
 import co.com.leronarenwino.usecase.GetUserUseCase;
 import co.com.leronarenwino.usecase.LoginUseCase;
 import co.com.leronarenwino.usecase.SaveUserUseCase;
@@ -16,6 +19,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
@@ -160,7 +164,7 @@ public class Handler {
             )
     )
     public Mono<ServerResponse> login(ServerRequest serverRequest) {
-        log.info("Solicitud POST /api/v1/login recibida");
+        log.info("POST /api/v1/login request received");
         return serverRequest
                 .bodyToMono(LoginRequest.class)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException(EMPTY_BODY_ERROR)))
@@ -198,17 +202,21 @@ public class Handler {
                     }
             )
     )
-    public Mono<ServerResponse> getUser(ServerRequest serverRequest) {
+    public Mono<ServerResponse> getUserDataByEmailPathVariable(ServerRequest serverRequest) {
         log.info("GET /api/v1/user/{email} request received");
         return getPathVariable(serverRequest, "email")
-                .doOnSuccess(email -> log.info("Retrieving user data for email: {}", email))
-                .flatMap(email -> getUserUseCase.getUser(email)
-                        .doOnNext(user -> log.info("User data received: {}", user))
-                        .flatMap(user -> ServerResponse.ok()
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .bodyValue(success(fromDomain(user), "User data retrieved successfully")))
-                        .doOnSuccess(ignored -> log.info("Get user data was successful for email: {}", email))
-                        .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found with email: " + email))));
+                .flatMap(this::getUserDataByEmail);
+    }
+
+    private Mono<ServerResponse> getUserDataByEmail(String email) {
+        log.info("Retrieving user data for email: {}", email);
+        return getUserUseCase.getUser(email)
+                .doOnNext(user -> log.info("User data received: {}", user))
+                .flatMap(user -> ServerResponse.ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(success(fromDomain(user), "User data retrieved successfully")))
+                .doOnSuccess(ignored -> log.info("Get user data was successful for email: {}", email))
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found with email: " + email)));
     }
 
     public Mono<String> getPathVariable(ServerRequest serverRequest, String name) {
@@ -349,17 +357,20 @@ public class Handler {
     }
 
     public Mono<ServerResponse> validateToken(ServerRequest serverRequest) {
-        log.info("Post /api/v1/validate request received");
-        return serverRequest
-                .bodyToMono(ValidateTokenRequest.class)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException(EMPTY_BODY_ERROR)))
-                .flatMap(this::validateTokenRequest)
-                .map(ValidateTokenRequest::token)
-                .flatMap(validateTokenUseCase::validateToken)
+        log.info("GET /api/v1/validate request received");
+        return validateTokenUseCase.validateToken(extractTokenFromServerRequest(serverRequest))
                 .flatMap(username -> ServerResponse.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(success(username, "Token is valid")))
                 .onErrorMap(ex -> new IllegalArgumentException(ex.getMessage()));
+    }
+
+    protected String extractTokenFromServerRequest(ServerRequest serverRequest) {
+        String authHeader = serverRequest.headers().firstHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        throw new IllegalArgumentException("Authorization header is missing or invalid");
     }
 
     private Mono<UserRequest> validateUserRequest(UserRequest userRequest) {
@@ -378,14 +389,5 @@ public class Handler {
             return Mono.error(new IllegalArgumentException(message));
         }
         return Mono.just(loginRequest);
-    }
-
-    private Mono<ValidateTokenRequest> validateTokenRequest(ValidateTokenRequest validateTokenRequest) {
-        Set<ConstraintViolation<ValidateTokenRequest>> violations = validator.validate(validateTokenRequest);
-        if (!violations.isEmpty()) {
-            String message = violations.iterator().next().getMessage();
-            return Mono.error(new IllegalArgumentException(message));
-        }
-        return Mono.just(validateTokenRequest);
     }
 }
