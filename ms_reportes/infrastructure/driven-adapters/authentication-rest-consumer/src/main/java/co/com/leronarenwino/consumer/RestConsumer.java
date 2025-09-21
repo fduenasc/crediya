@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static co.com.leronarenwino.consumer.TokenValidationRequest.create;
-
 @Component
 public class RestConsumer implements ClientValidatorService {
 
@@ -69,9 +67,9 @@ public class RestConsumer implements ClientValidatorService {
     }
 
     private Mono<TokenValidationResponse> performTokenValidation(String token) {
-        return webClient.post()
+        return webClient.get()
                 .uri(VALIDATION_ENDPOINT)
-                .bodyValue(create(token))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchangeToMono(this::handleResponse)
                 .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
                         .filter(this::isRetryableException))
