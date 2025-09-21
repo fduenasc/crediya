@@ -4,5 +4,5 @@ import co.com.leronarenwino.model.UserData;
 import reactor.core.publisher.Mono;
 
 public interface ClientValidatorService {
-    Mono<UserData> getDataFromValidatedUser(String email, String token);
+    Mono<UserData> getUserDataByEmail(String email, String token);
 }

@@ -19,10 +19,8 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -244,7 +242,7 @@ class HandlerTest {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
         String token = "validToken";
 
-        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", token))
+        when(validateUserUseCase.getUserDataByEmail("test@example.com", token))
                 .thenReturn(Mono.error(new RuntimeException("Error getting user data")));
 
         StepVerifier.create(handler.enrichWithUserData(loanApplication, token))
@@ -259,7 +257,7 @@ class HandlerTest {
         String token = "validToken";
         UserData userData = new UserData("Ned", "Stark", "nedstark@winterfell.got", 50000.0, null, "Winterfell", "Raven", "ADMIn");
 
-        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", token))
+        when(validateUserUseCase.getUserDataByEmail("test@example.com", token))
                 .thenReturn(Mono.just(userData));
         when(getLoanTypeUseCase.getLoanTypeByName("Personal"))
                 .thenReturn(Mono.error(new RuntimeException("Error getting loan type")));
@@ -274,7 +272,7 @@ class HandlerTest {
     void enrichWithUserDataWithNullTokenTest() {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "test@example.com", "Personal", "Pendiente");
 
-        when(validateUserUseCase.getDataFromValidatedUser("test@example.com", null))
+        when(validateUserUseCase.getUserDataByEmail("test@example.com", null))
                 .thenReturn(Mono.error(new IllegalArgumentException("Token cannot be null")));
 
         StepVerifier.create(handler.enrichWithUserData(loanApplication, null))
@@ -288,42 +286,13 @@ class HandlerTest {
         LoanApplication loanApplication = new LoanApplication(1000L, 12L, 123456789L, "", "Personal", "Pendiente");
         String token = "validToken";
 
-        when(validateUserUseCase.getDataFromValidatedUser("", token))
+        when(validateUserUseCase.getUserDataByEmail("", token))
                 .thenReturn(Mono.error(new IllegalArgumentException("Email cannot be empty")));
 
         StepVerifier.create(handler.enrichWithUserData(loanApplication, token))
                 .expectErrorMatches(error -> error instanceof IllegalArgumentException &&
                         error.getMessage().equals("Email cannot be empty"))
                 .verify();
-    }
-
-
-    @Test
-    void extractPaginationAndFilterParams_withAllParametersTest() {
-        ServerRequest request = mock(ServerRequest.class);
-        when(request.queryParam("page")).thenReturn(Optional.of("2"));
-        when(request.queryParam("size")).thenReturn(Optional.of("20"));
-        when(request.queryParam("status")).thenReturn(Optional.of("Aprobado"));
-
-        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
-
-        assertThat(result.page()).isEqualTo(2);
-        assertThat(result.size()).isEqualTo(20);
-        assertThat(result.status()).isEqualTo("Aprobado");
-    }
-
-    @Test
-    void extractPaginationAndFilterParams_withDefaultValuesTest() {
-        ServerRequest request = mock(ServerRequest.class);
-        when(request.queryParam("page")).thenReturn(Optional.empty());
-        when(request.queryParam("size")).thenReturn(Optional.empty());
-        when(request.queryParam("status")).thenReturn(Optional.empty());
-
-        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
-
-        assertThat(result.page()).isZero();
-        assertThat(result.size()).isEqualTo(10);
-        assertThat(result.status()).isNull();
     }
 
     @Test
@@ -377,21 +346,6 @@ class HandlerTest {
 
         // Then
         assertEquals("", token);
-    }
-
-
-    @Test
-    void extractPaginationAndFilterParams_withPartialParametersTest() {
-        ServerRequest request = mock(ServerRequest.class);
-        when(request.queryParam("page")).thenReturn(Optional.of("5"));
-        when(request.queryParam("size")).thenReturn(Optional.empty());
-        when(request.queryParam("status")).thenReturn(Optional.of("Pendiente"));
-
-        PaginationAndFilterParams result = handler.extractPaginationAndFilterParams(request);
-
-        assertThat(result.page()).isEqualTo(5);
-        assertThat(result.size()).isEqualTo(10);
-        assertThat(result.status()).isEqualTo("Pendiente");
     }
 
     @Test

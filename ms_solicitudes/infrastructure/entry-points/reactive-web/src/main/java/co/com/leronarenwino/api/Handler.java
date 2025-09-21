@@ -242,7 +242,7 @@ public class Handler {
     }
 
     protected Mono<LoanApplicationResponse> enrichWithUserData(LoanApplication loanApplication, String token) {
-        return validateUserUseCase.getDataFromValidatedUser(loanApplication.email(), token)
+        return validateUserUseCase.getUserDataByEmail(loanApplication.email(), token)
                 .map(UserDataResponse::toUserDataResponse)
                 .flatMap(userData ->
                         getLoanTypeUseCase.getLoanTypeByName(loanApplication.loanType())
@@ -288,8 +288,8 @@ public class Handler {
         return new PaginatedResponse<>(content, page, size, totalElements, totalPages, hasNext, hasPrevious);
     }
 
-    protected String extractTokenFromRequest(ServerRequest request) {
-        String authHeader = request.headers().firstHeader(HttpHeaders.AUTHORIZATION);
+    protected String extractTokenFromRequest(ServerRequest serverRequest) {
+        String authHeader = serverRequest.headers().firstHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
         }
@@ -451,7 +451,7 @@ public class Handler {
                     return Mono.just(Tuples.of(username, request));
                 })
                 .doOnNext(tuple -> log.info("Loan application payload: {}", tuple.getT2()))
-                .flatMap(tuple -> validateUserUseCase.getDataFromValidatedUser(tuple.getT1(), extractTokenFromRequest(serverRequest))
+                .flatMap(tuple -> validateUserUseCase.getUserDataByEmail(tuple.getT1(), extractTokenFromRequest(serverRequest))
                         .flatMap(userData -> saveLoanApplicationUseCase.saveLoanApplication(tuple.getT2().toDomain(), userData))
                         .flatMap(capacity -> sendApprovedMessageIfApproved(capacity.loanStatus())
                                 .then(Mono.just(capacity)))

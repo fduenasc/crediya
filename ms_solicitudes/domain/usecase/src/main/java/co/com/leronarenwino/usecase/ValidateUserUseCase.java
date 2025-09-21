@@ -5,7 +5,7 @@ import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import reactor.core.publisher.Mono;
 
 public record ValidateUserUseCase (ClientValidatorService clientValidatorService) {
-    public Mono<UserData> getDataFromValidatedUser(String email, String token) {
-        return clientValidatorService.getDataFromValidatedUser(email, token);
+    public Mono<UserData> getUserDataByEmail(String email, String token) {
+        return clientValidatorService.getUserDataByEmail(email, token);
     }
 }

@@ -48,7 +48,7 @@ class RestConsumerTest {
     }
 
     @Test
-    void getDataFromValidatedUserSuccessTest() throws JsonProcessingException {
+    void getUserDataByEmailSuccessTest() throws JsonProcessingException {
         UserData userData = new UserData("Ned", "Stark", "nedstark@winterfell.got", 1234.56, null, "Winterfell", "1234567890", "ADMIN");
         GenericResponse<UserData> response = new GenericResponse<>("OK", userData, "2025-01-01T10:00:00", 200);
 
@@ -57,7 +57,7 @@ class RestConsumerTest {
                 .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .setBody(objectMapper.writeValueAsString(response)));
 
-        StepVerifier.create(restConsumer.getDataFromValidatedUser("nedstark@winterfell.got", "token"))
+        StepVerifier.create(restConsumer.getUserDataByEmail("nedstark@winterfell.got", "token"))
                 .assertNext(retrievedUserData -> {
                     assert retrievedUserData.name().equals("Ned");
                     assert retrievedUserData.lastname().equals("Stark");
@@ -67,35 +67,35 @@ class RestConsumerTest {
     }
 
     @Test
-    void getDataFromValidatedUser4xxTest() {
+    void getUserDataByEmail4XxTest() {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 401 Unauthorized"));
 
-        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+        StepVerifier.create(restConsumer.getUserDataByEmail("test@example.com", "token"))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
                         e.getMessage().contains("Token is invalid or expired"))
                 .verify();
     }
 
     @Test
-    void getDataFromValidatedUser5xxTest() {
+    void getUserDataByEmail5XxTest() {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 500 Internal Server Error"));
 
-        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+        StepVerifier.create(restConsumer.getUserDataByEmail("test@example.com", "token"))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException &&
                         e.getMessage().contains("Server error when getting user data"))
                 .verify();
     }
 
     @Test
-    void getDataFromValidatedUserInvalidBodyTest() {
+    void getUserDataByEmailInvalidBodyTest() {
         mockWebServer.enqueue(new MockResponse()
                 .setStatus("HTTP/1.1 200 OK")
                 .setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .setBody("{}")); // cuerpo inválido
 
-        StepVerifier.create(restConsumer.getDataFromValidatedUser("test@example.com", "token"))
+        StepVerifier.create(restConsumer.getUserDataByEmail("test@example.com", "token"))
                 .expectError()
                 .verify();
     }

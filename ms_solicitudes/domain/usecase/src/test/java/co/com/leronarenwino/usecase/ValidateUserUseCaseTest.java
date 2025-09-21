@@ -23,22 +23,22 @@ class ValidateUserUseCaseTest {
     }
 
     @Test
-    void getDataFromValidatedUserSuccess() {
+    void getUserDataByEmailSuccess() {
         UserData userData = new UserData("Juan", "Pérez", "juan.perez@example.com", 3500.0, LocalDate.of(1990, 1, 1), "Calle 123", "3001234567", "CLIENT");
-        when(clientValidatorService.getDataFromValidatedUser("juan.perez@example.com", "token123"))
+        when(clientValidatorService.getUserDataByEmail("juan.perez@example.com", "token123"))
                 .thenReturn(Mono.just(userData));
 
-        StepVerifier.create(useCase.getDataFromValidatedUser("juan.perez@example.com", "token123"))
+        StepVerifier.create(useCase.getUserDataByEmail("juan.perez@example.com", "token123"))
                 .expectNext(userData)
                 .verifyComplete();
     }
 
     @Test
-    void getDataFromValidatedUserError() {
-        when(clientValidatorService.getDataFromValidatedUser("error@correo.com", "token123"))
+    void getUserDataByEmailError() {
+        when(clientValidatorService.getUserDataByEmail("error@correo.com", "token123"))
                 .thenReturn(Mono.error(new IllegalArgumentException("Token inválido")));
 
-        StepVerifier.create(useCase.getDataFromValidatedUser("error@correo.com", "token123"))
+        StepVerifier.create(useCase.getUserDataByEmail("error@correo.com", "token123"))
                 .expectErrorMatches(e -> e instanceof IllegalArgumentException && e.getMessage().equals("Token inválido"))
                 .verify();
     }
