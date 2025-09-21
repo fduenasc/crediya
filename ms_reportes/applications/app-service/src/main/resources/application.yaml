@@ -18,8 +18,12 @@ security:
     protected-password: "[PROTECTED]"
 adapter:
   restconsumer:
-    url: "${MS_AUTENTICACION_URL:http://localhost:8080}"
-    timeout: 5000
+    authentication:
+      url: "${MS_AUTENTICACION_URL:http://localhost:8080}"
+      timeout: 5000
+    loan:
+      url: "${MS_SOLICITUDES_URL:http://localhost:8081}"
+      timeout: 5000
 entrypoint:
   sqs:
     region: "us-east-1"

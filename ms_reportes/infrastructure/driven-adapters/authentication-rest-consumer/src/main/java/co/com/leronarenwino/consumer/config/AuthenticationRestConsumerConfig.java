@@ -16,15 +16,15 @@ import reactor.netty.http.client.HttpClient;
 import java.time.Duration;
 
 @Configuration
-@EnableConfigurationProperties(RestConsumerProperties.class)
-public class RestConsumerConfig {
+@EnableConfigurationProperties(AuthenticationRestConsumerProperties.class)
+public class AuthenticationRestConsumerConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(RestConsumerConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationRestConsumerConfig.class);
 
     private final String url;
     private final int timeout;
 
-    public RestConsumerConfig(@Qualifier("restConsumerProperties") RestConsumerProperties properties) {
+    public AuthenticationRestConsumerConfig(@Qualifier("authenticationRestConsumerProperties") AuthenticationRestConsumerProperties properties) {
         this.url = properties.getUrl();
         this.timeout = properties.getTimeout();
     }

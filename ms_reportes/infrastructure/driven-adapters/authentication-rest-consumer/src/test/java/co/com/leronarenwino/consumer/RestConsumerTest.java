@@ -1,8 +1,9 @@
 package co.com.leronarenwino.consumer;
 
-import co.com.leronarenwino.consumer.config.RestConsumerConfig;
-import co.com.leronarenwino.consumer.config.RestConsumerProperties;
+import co.com.leronarenwino.consumer.config.AuthenticationRestConsumerConfig;
+import co.com.leronarenwino.consumer.config.AuthenticationRestConsumerProperties;
 import co.com.leronarenwino.consumer.dto.GenericResponse;
+import co.com.leronarenwino.consumer.dto.TokenValidationResponse;
 import co.com.leronarenwino.model.UserData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,11 +33,11 @@ class RestConsumerTest {
 
         objectMapper = new ObjectMapper();
 
-        RestConsumerProperties properties = new RestConsumerProperties();
+        AuthenticationRestConsumerProperties properties = new AuthenticationRestConsumerProperties();
         properties.setUrl(mockWebServer.url("/").toString());
         properties.setTimeout(5000);
 
-        RestConsumerConfig config = new RestConsumerConfig(properties);
+        AuthenticationRestConsumerConfig config = new AuthenticationRestConsumerConfig(properties);
         WebClient webClient = config.getWebClient(WebClient.builder());
 
         restConsumer = new RestConsumer(webClient, "password");

@@ -25,23 +25,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = {
-        RestConsumerConfig.class,
-        RestConsumerProperties.class,
-        RestConsumerConfigTest.TestConfig.class,
-        RestConsumerPropertiesTest.class
+        AuthenticationRestConsumerConfig.class,
+        AuthenticationRestConsumerProperties.class,
+        AuthenticationRestConsumerConfigTest.TestConfig.class,
+        AuthenticationRestConsumerPropertiesTest.class
 })
 @EnableConfigurationProperties
-class RestConsumerConfigTest {
+class AuthenticationRestConsumerConfigTest {
 
-    private RestConsumerConfig restConsumerConfig;
+    private AuthenticationRestConsumerConfig authenticationRestConsumerConfig;
 
     @BeforeEach
     void setUp() {
-        RestConsumerProperties properties = mock(RestConsumerProperties.class);
+        AuthenticationRestConsumerProperties properties = mock(AuthenticationRestConsumerProperties.class);
         when(properties.getUrl()).thenReturn("http://localhost:8080");
         when(properties.getTimeout()).thenReturn(5000);
 
-        restConsumerConfig = new RestConsumerConfig(properties);
+        authenticationRestConsumerConfig = new AuthenticationRestConsumerConfig(properties);
     }
 
     @TestConfiguration
@@ -62,7 +62,7 @@ class RestConsumerConfigTest {
     @Test
     void loggingFilterTest() {
         ExchangeFilterFunction loggingFilter = ReflectionTestUtils.invokeMethod(
-                restConsumerConfig, "loggingFilter");
+                authenticationRestConsumerConfig, "loggingFilter");
 
         ClientRequest clientRequest = mock(ClientRequest.class);
         when(clientRequest.method()).thenReturn(HttpMethod.POST);
@@ -77,7 +77,7 @@ class RestConsumerConfigTest {
     @Test
     void errorHandlingFilterWithErrorResponseTest() {
         ExchangeFilterFunction errorHandlingFilter = ReflectionTestUtils.invokeMethod(
-                restConsumerConfig, "errorHandlingFilter");
+                authenticationRestConsumerConfig, "errorHandlingFilter");
 
         ClientRequest clientRequest = mock(ClientRequest.class);
         ClientResponse clientResponse = mock(ClientResponse.class);
@@ -97,7 +97,7 @@ class RestConsumerConfigTest {
     @Test
     void errorHandlingFilterWithSuccessResponseTest() {
         ExchangeFilterFunction errorHandlingFilter = ReflectionTestUtils.invokeMethod(
-                restConsumerConfig, "errorHandlingFilter");
+                authenticationRestConsumerConfig, "errorHandlingFilter");
 
         ClientRequest clientRequest = mock(ClientRequest.class);
         ClientResponse clientResponse = mock(ClientResponse.class);
