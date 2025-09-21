@@ -1,5 +1,6 @@
 package co.com.leronarenwino.config;
 
+import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import co.com.leronarenwino.model.gateway.ReportGateway;
 import co.com.leronarenwino.usecase.GetTotalApprovedLoansUseCase;
 import co.com.leronarenwino.usecase.IncrementTotalApprovedLoansUseCase;
@@ -17,8 +18,8 @@ import org.springframework.context.annotation.FilterType;
 public class UseCasesConfig {
 
     @Bean
-    public GetTotalApprovedLoansUseCase getTotalApprovedLoansUseCase(ReportGateway reportGateway) {
-        return new GetTotalApprovedLoansUseCase(reportGateway);
+    public GetTotalApprovedLoansUseCase getTotalApprovedLoansUseCase(ClientValidatorService clientValidatorService, ReportGateway reportGateway) {
+        return new GetTotalApprovedLoansUseCase(clientValidatorService, reportGateway);
     }
 
     @Bean

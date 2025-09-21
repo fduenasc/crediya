@@ -16,21 +16,21 @@ import reactor.netty.http.client.HttpClient;
 import java.time.Duration;
 
 @Configuration
-@EnableConfigurationProperties(AuthenticationRestConsumerProperties.class)
-public class AuthenticationRestConsumerConfig {
+@EnableConfigurationProperties(LoanRestConsumerProperties.class)
+public class LoanRestConsumerConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationRestConsumerConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(LoanRestConsumerConfig.class);
 
     private final String url;
     private final int timeout;
 
-    public AuthenticationRestConsumerConfig(@Qualifier("authenticationRestConsumerProperties") AuthenticationRestConsumerProperties properties) {
+    public LoanRestConsumerConfig(@Qualifier("loanRestConsumerProperties") LoanRestConsumerProperties properties) {
         this.url = properties.getUrl();
         this.timeout = properties.getTimeout();
     }
 
-    @Bean("authenticationWebClient")
-    public WebClient getAuthenticationWebClient(WebClient.Builder builder) {
+    @Bean("loanWebClient")
+    public WebClient getLoanWebClient(WebClient.Builder builder) {
         return builder
                 .baseUrl(url)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")

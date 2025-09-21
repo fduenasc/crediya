@@ -16,6 +16,10 @@ public class RouterRest {
 
     @Bean
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(GET(REPORTS_URL), serverRequest -> handler.getTotalApprovedLoanApplications());
+        return route(GET(REPORTS_URL), serverRequest -> handler.getTotalApprovedLoanApplications())
+                .andRoute(GET("/api/v1/report"), serverRequest -> {
+                    String token = serverRequest.headers().firstHeader("Authorization");
+                    return handler.getApprovedLoanApplications(token);
+                });
     }
 }

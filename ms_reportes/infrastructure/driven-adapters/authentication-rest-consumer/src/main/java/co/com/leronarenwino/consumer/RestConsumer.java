@@ -1,11 +1,14 @@
 package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.dto.GenericResponse;
+import co.com.leronarenwino.consumer.dto.PagedLoanApplicationResponse;
 import co.com.leronarenwino.consumer.dto.TokenValidationResponse;
+import co.com.leronarenwino.model.LoanApplication;
 import co.com.leronarenwino.model.UserData;
 import co.com.leronarenwino.model.gateway.ClientValidatorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -33,19 +37,25 @@ public class RestConsumer implements ClientValidatorService {
     private static final String VALIDATION_ENDPOINT = "/api/v1/validate";
     private static final String INVALID_TOKEN_MESSAGE = "Error on token validation: Invalid or expired token";
 
-    private final WebClient webClient;
+    private final WebClient authenticationWebClient;
+    private final WebClient loanWebClient;
     private final String protectedPassword;
 
-    public RestConsumer(WebClient webClient,
-                        @Value("${security.user.protected-password:defaultPassword}") String protectedPassword) {
-        this.webClient = webClient;
+    public RestConsumer(
+            @Qualifier("authenticationWebClient") WebClient authenticationWebClient,
+            @Qualifier("loanWebClient") WebClient loanWebClient,
+            @Value("${security.user.protected-password:defaultPassword}") String protectedPassword
+    ) {
+        this.authenticationWebClient = authenticationWebClient;
+        this.loanWebClient = loanWebClient;
         this.protectedPassword = protectedPassword;
     }
+
 
     @Override
     public Mono<UserData> getDataFromValidatedUser(String email, String token) {
         log.info("Getting user data for email: {}", email);
-        return webClient
+        return authenticationWebClient
                 .get()
                 .uri("/api/v1/user/{email}", email)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -54,10 +64,26 @@ public class RestConsumer implements ClientValidatorService {
                         Mono.error(new IllegalArgumentException("Token is invalid or expired")))
                 .onStatus(HttpStatusCode::is5xxServerError, response ->
                         Mono.error(new IllegalArgumentException("Server error when getting user data")))
-                .bodyToMono(new ParameterizedTypeReference<GenericResponse<UserData>>() {})
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<UserData>>() {
+                })
                 .map(GenericResponse::toUser)
                 .doOnSuccess(userData -> log.info("User data retrieved successfully: {}", userData))
                 .doOnError(error -> log.error("Error getting user data: {}", error.getMessage()));
+    }
+
+    @Override
+    public Flux<LoanApplication> getApprovedLoanApplications(String token) {
+        return loanWebClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/v1/loan-application")
+                        .queryParam("status", "aprobada")
+                        .build())
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<GenericResponse<PagedLoanApplicationResponse>>() {
+                })
+                .flatMapMany(response -> Flux.fromIterable(response.data().content()));
     }
 
     public Mono<UserDetails> validateTokenAndGetUserDetails(String token) {
@@ -68,7 +94,7 @@ public class RestConsumer implements ClientValidatorService {
     }
 
     private Mono<TokenValidationResponse> performTokenValidation(String token) {
-        return webClient.get()
+        return authenticationWebClient.get()
                 .uri(VALIDATION_ENDPOINT)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchangeToMono(this::handleResponse)

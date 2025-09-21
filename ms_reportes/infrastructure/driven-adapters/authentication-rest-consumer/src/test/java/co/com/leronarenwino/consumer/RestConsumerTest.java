@@ -2,6 +2,8 @@ package co.com.leronarenwino.consumer;
 
 import co.com.leronarenwino.consumer.config.AuthenticationRestConsumerConfig;
 import co.com.leronarenwino.consumer.config.AuthenticationRestConsumerProperties;
+import co.com.leronarenwino.consumer.config.LoanRestConsumerConfig;
+import co.com.leronarenwino.consumer.config.LoanRestConsumerProperties;
 import co.com.leronarenwino.consumer.dto.GenericResponse;
 import co.com.leronarenwino.consumer.dto.TokenValidationResponse;
 import co.com.leronarenwino.model.UserData;
@@ -33,14 +35,19 @@ class RestConsumerTest {
 
         objectMapper = new ObjectMapper();
 
-        AuthenticationRestConsumerProperties properties = new AuthenticationRestConsumerProperties();
-        properties.setUrl(mockWebServer.url("/").toString());
-        properties.setTimeout(5000);
+        AuthenticationRestConsumerProperties authenticationRestConsumerProperties = new AuthenticationRestConsumerProperties();
+        authenticationRestConsumerProperties.setUrl(mockWebServer.url("/").toString());
+        authenticationRestConsumerProperties.setTimeout(5000);
+        LoanRestConsumerProperties loanProperties = new LoanRestConsumerProperties();
+        loanProperties.setUrl(mockWebServer.url("/").toString());
+        loanProperties.setTimeout(5000);
 
-        AuthenticationRestConsumerConfig config = new AuthenticationRestConsumerConfig(properties);
-        WebClient webClient = config.getWebClient(WebClient.builder());
+        AuthenticationRestConsumerConfig authenticationRestConsumerConfig = new AuthenticationRestConsumerConfig(authenticationRestConsumerProperties);
+        LoanRestConsumerConfig loanRestConsumerConfig = new LoanRestConsumerConfig(loanProperties);
+        WebClient webClient = authenticationRestConsumerConfig.getAuthenticationWebClient(WebClient.builder());
+        WebClient loanWebClient = loanRestConsumerConfig.getLoanWebClient(WebClient.builder());
 
-        restConsumer = new RestConsumer(webClient, "password");
+        restConsumer = new RestConsumer(webClient, loanWebClient, "password");
     }
 
     @AfterEach

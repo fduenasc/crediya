@@ -18,6 +18,7 @@ public class SecurityConfig {
     private static final String BASE_PATH = "/api/v1";
     private static final String REPORTS_URL = BASE_PATH + "/reports";
     private static final String ADMIN_ROLE = "ADMIN";
+    private static final String ADVISOR_ROLE = "ADVISOR";
 
     private final JwtTokenAuthenticationFilter jwtTokenAuthenticationFilter;
 
@@ -39,7 +40,8 @@ public class SecurityConfig {
                         .pathMatchers("/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
 
                         // Endpoints protegidos
-                        .pathMatchers(HttpMethod.GET,REPORTS_URL).hasRole(ADMIN_ROLE)
+                        .pathMatchers(HttpMethod.GET, REPORTS_URL).hasRole(ADMIN_ROLE)
+                        .pathMatchers(HttpMethod.GET, "/api/v1/report").hasAnyRole(ADMIN_ROLE, ADVISOR_ROLE)
 
                         // Cualquier otra petición requiere autenticación
                         .anyExchange().authenticated()

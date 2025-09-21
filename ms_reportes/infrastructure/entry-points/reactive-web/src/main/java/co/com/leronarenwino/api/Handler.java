@@ -29,4 +29,16 @@ public class Handler {
                             .bodyValue(report);
                 });
     }
+
+    public Mono<ServerResponse> getApprovedLoanApplications(String token) {
+        log.info("Received request to get approved loan applications");
+        return getTotalApprovedLoansUseCase.getApprovedLoanApplications(token)
+                .collectList()
+                .flatMap(loanApplications -> {
+                    log.info("Get approved loan applications: {}", loanApplications);
+                    return ServerResponse.ok()
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(loanApplications);
+                });
+    }
 }
