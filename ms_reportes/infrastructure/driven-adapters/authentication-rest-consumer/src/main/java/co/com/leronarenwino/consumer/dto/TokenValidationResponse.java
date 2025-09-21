@@ -1,4 +1,4 @@
-package co.com.leronarenwino.consumer;
+package co.com.leronarenwino.consumer.dto;
 
 public record TokenValidationResponse(
         String message,
