@@ -1,6 +1,5 @@
-package co.com.leronarenwino.tokenprovider.config;
+package co.com.leronarenwino.jwtutils.config;
 
-import co.com.leronarenwino.jwtutils.config.JwtProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;

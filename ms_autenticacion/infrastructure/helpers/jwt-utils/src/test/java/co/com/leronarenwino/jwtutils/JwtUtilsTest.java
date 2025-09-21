@@ -1,6 +1,5 @@
-package co.com.leronarenwino.tokenprovider.util;
+package co.com.leronarenwino.jwtutils;
 
-import co.com.leronarenwino.jwtutils.JwtUtils;
 import co.com.leronarenwino.jwtutils.config.JwtProperties;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
