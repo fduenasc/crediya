@@ -4,13 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.codec.DecodingException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughputExceededException;
 import software.amazon.awssdk.services.dynamodb.model.RequestLimitExceededException;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 
 import java.net.ConnectException;
 import java.util.concurrent.CompletionException;
@@ -84,23 +85,31 @@ public class GlobalExceptionHandler {
         log.error("Error de deserialización: {}", ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatus(400);
         problem.setTitle("Bad Request");
-        problem.setDetail("Formato de solicitud inválido");
+        problem.setDetail("Invalid request format");
         return problem;
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ProblemDetail handleResponseStatusException(ResponseStatusException ex) {
-        if (ex.getStatusCode().value() == 404) {
-            log.error("Recurso no encontrado: {}", ex.getMessage());
+        int status = ex.getStatusCode().value();
+        if (status == 404) {
+            log.error("Resource not found: {}", ex.getMessage());
             ProblemDetail problem = ProblemDetail.forStatus(404);
             problem.setTitle("Not Found");
-            problem.setDetail("El recurso solicitado no existe");
+            problem.setDetail("The requested resource does not exist");
             return problem;
         }
-        log.error("Error de estado de respuesta: {}", ex.getMessage());
+        if (status == 415) {
+            log.error("Content type not supported: {}", ex.getMessage());
+            ProblemDetail problem = ProblemDetail.forStatus(415);
+            problem.setTitle("Unsupported Media Type");
+            problem.setDetail("The content type is not supported");
+            return problem;
+        }
+        log.error("Status error {}: {}", status, ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatus(ex.getStatusCode());
         problem.setTitle("Error");
-        problem.setDetail("Ocurrió un error inesperado al procesar la solicitud");
+        problem.setDetail("An unexpected error occurred while processing the request");
         return problem;
     }
 
@@ -118,7 +127,16 @@ public class GlobalExceptionHandler {
         log.error("No se pudo conectar a la base de datos: {}", ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatus(500);
         problem.setTitle(INTERNAL_SERVER_ERROR_DETAIL);
-        problem.setDetail("Ocurrió un error en el servidor");
+        problem.setDetail("Internal server error occurred");
+        return problem;
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ProblemDetail handleAuthorizationDeniedException(AuthorizationDeniedException ex) {
+        log.error("Access denied: {}", ex.getMessage());
+        ProblemDetail problem = ProblemDetail.forStatus(403);
+        problem.setTitle("Forbidden");
+        problem.setDetail("You do not have permission to access this resource");
         return problem;
     }
 }
