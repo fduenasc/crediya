@@ -36,17 +36,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ProblemDetail handleResponseStatusException(ResponseStatusException ex) {
-        if (ex.getStatusCode().value() == 404) {
-            log.error("Recurso no encontrado: {}", ex.getMessage());
+        int status = ex.getStatusCode().value();
+        if (status == 404) {
+            log.error("Resource not found: {}", ex.getMessage());
             ProblemDetail problem = ProblemDetail.forStatus(404);
             problem.setTitle("Not Found");
-            problem.setDetail("El recurso solicitado no existe");
+            problem.setDetail("The requested resource does not exist");
             return problem;
         }
-        log.error("Error de estado de respuesta: {}", ex.getMessage());
+        if (status == 415) {
+            log.error("Content type not supported: {}", ex.getMessage());
+            ProblemDetail problem = ProblemDetail.forStatus(415);
+            problem.setTitle("Unsupported Media Type");
+            problem.setDetail("The content type is not supported");
+            return problem;
+        }
+        log.error("Status error {}: {}", status, ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatus(ex.getStatusCode());
         problem.setTitle("Error");
-        problem.setDetail("Ocurrió un error inesperado al procesar la solicitud");
+        problem.setDetail("An unexpected error occurred while processing the request");
         return problem;
     }
 
