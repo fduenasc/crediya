@@ -34,12 +34,6 @@ public class Handler {
             summary = "Get report of approved loan applications",
             description = "Retrieves the total count of approved loan applications, the total loan amount, and the list of approved applications. Requires Bearer token authentication."
     )
-    @RequestBody(
-            required = true,
-            content = @Content(
-                    mediaType = MediaType.APPLICATION_JSON_VALUE
-            )
-    )
     @ApiResponse(
             responseCode = "200",
             description = "Loan application successfully registered",
